@@ -1,0 +1,2 @@
+terraform import foxcon_confluent_invitation.this i-abc123
+terraform import foxcon_confluent_invitation.this user@company.com

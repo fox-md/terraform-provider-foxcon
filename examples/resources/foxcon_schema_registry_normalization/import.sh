@@ -1,0 +1,1 @@
+terraform import foxcon_schema_registry_normalization.test test
