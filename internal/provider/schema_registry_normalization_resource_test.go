@@ -103,6 +103,12 @@ func TestSchemaNormalizationResourceImportHappyFlow(t *testing.T) {
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", _api_secret)
 
 	resource.Test(t, resource.TestCase{
+		TerraformVersionChecks: []resource.TerraformVersionCheck{
+            resource.TerraformVersionCheck{
+                MinimumVersion: "1.5.0",
+                Skip:           true,
+            },
+        },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Define resource
@@ -135,6 +141,12 @@ resource "foxcon_schema_registry_normalization" "test_import" {
 func TestSchemaNormalizationResourceNoRestEndpointParameter(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
+		TerraformVersionChecks: []resource.TerraformVersionCheck{
+            resource.TerraformVersionCheck{
+                MinimumVersion: "1.5.0",
+                Skip:           true,
+            },
+        },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -180,6 +192,12 @@ func TestSchemaNormalizationResourceImportNoRestEndpointSet(t *testing.T) {
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", _api_secret)
 
 	resource.Test(t, resource.TestCase{
+		TerraformVersionChecks: []resource.TerraformVersionCheck{
+            resource.TerraformVersionCheck{
+                MinimumVersion: "1.5.0",
+                Skip:           true,
+            },
+        },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Define resource
@@ -218,6 +236,12 @@ func TestSchemaNormalizationResourceImportNoApiSecretSet(t *testing.T) {
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", "")
 
 	resource.Test(t, resource.TestCase{
+		TerraformVersionChecks: []resource.TerraformVersionCheck{
+            resource.TerraformVersionCheck{
+                MinimumVersion: "1.5.0",
+                Skip:           true,
+            },
+        },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Define resource
@@ -256,6 +280,12 @@ func TestSchemaNormalizationResourceImportNoApiKeySet(t *testing.T) {
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", _api_secret)
 
 	resource.Test(t, resource.TestCase{
+		TerraformVersionChecks: []resource.TerraformVersionCheck{
+            resource.TerraformVersionCheck{
+                MinimumVersion: "1.5.0",
+                Skip:           true,
+            },
+        },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Define resource

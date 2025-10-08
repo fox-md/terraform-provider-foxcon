@@ -86,6 +86,12 @@ func TestSubjectNormalizationResourceImportHappyFlow(t *testing.T) {
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", api_secret)
 
 	resource.Test(t, resource.TestCase{
+		TerraformVersionChecks: []resource.TerraformVersionCheck{
+            resource.TerraformVersionCheck{
+                MinimumVersion: "1.5.0",
+                Skip:           true,
+            },
+        },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Define resource
@@ -188,6 +194,12 @@ func TestSubjectNormalizationResourceImportNoRestEndpointSet(t *testing.T) {
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", api_secret)
 
 	resource.Test(t, resource.TestCase{
+		TerraformVersionChecks: []resource.TerraformVersionCheck{
+            resource.TerraformVersionCheck{
+                MinimumVersion: "1.5.0",
+                Skip:           true,
+            },
+        },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Define resource
@@ -227,6 +239,12 @@ func TestSubjectNormalizationResourceImportNoApiSecretSet(t *testing.T) {
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", "")
 
 	resource.Test(t, resource.TestCase{
+		TerraformVersionChecks: []resource.TerraformVersionCheck{
+            resource.TerraformVersionCheck{
+                MinimumVersion: "1.5.0",
+                Skip:           true,
+            },
+        },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Define resource
@@ -266,6 +284,12 @@ func TestSubjectNormalizationResourceImportNoApiKeySet(t *testing.T) {
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", api_secret)
 
 	resource.Test(t, resource.TestCase{
+		TerraformVersionChecks: []resource.TerraformVersionCheck{
+            resource.TerraformVersionCheck{
+                MinimumVersion: "1.5.0",
+                Skip:           true,
+            },
+        },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Define resource
