@@ -82,9 +82,9 @@ resource "foxcon_subject_normalization" "test" {
 
 func TestSubjectNormalizationResourceImportHappyFlow(t *testing.T) {
 
-	os.Setenv("IMPORT_SCHEMA_REGISTRY_REST_ENDPOINT", rest_endpoint)
-	os.Setenv("IMPORT_SCHEMA_REGISTRY_API_KEY", api_key)
-	os.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", api_secret)
+	t.Setenv("IMPORT_SCHEMA_REGISTRY_REST_ENDPOINT", rest_endpoint)
+	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_KEY", api_key)
+	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", api_secret)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -184,9 +184,9 @@ resource "foxcon_subject_normalization" "test" {
 
 func TestSubjectNormalizationResourceImportNoRestEndpointSet(t *testing.T) {
 
-	os.Setenv("IMPORT_SCHEMA_REGISTRY_REST_ENDPOINT", "")
-	os.Setenv("IMPORT_SCHEMA_REGISTRY_API_KEY", api_key)
-	os.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", api_secret)
+	t.Setenv("IMPORT_SCHEMA_REGISTRY_REST_ENDPOINT", "")
+	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_KEY", api_key)
+	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", api_secret)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -223,9 +223,9 @@ resource "foxcon_subject_normalization" "test_import" {
 
 func TestSubjectNormalizationResourceImportNoApiSecretSet(t *testing.T) {
 
-	os.Setenv("IMPORT_SCHEMA_REGISTRY_REST_ENDPOINT", rest_endpoint)
-	os.Setenv("IMPORT_SCHEMA_REGISTRY_API_KEY", api_key)
-	os.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", "")
+	t.Setenv("IMPORT_SCHEMA_REGISTRY_REST_ENDPOINT", rest_endpoint)
+	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_KEY", api_key)
+	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", "")
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -262,9 +262,9 @@ resource "foxcon_subject_normalization" "test_import" {
 
 func TestSubjectNormalizationResourceImportNoApiKeySet(t *testing.T) {
 
-	os.Setenv("IMPORT_SCHEMA_REGISTRY_REST_ENDPOINT", rest_endpoint)
-	os.Setenv("IMPORT_SCHEMA_REGISTRY_API_KEY", "")
-	os.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", api_secret)
+	t.Setenv("IMPORT_SCHEMA_REGISTRY_REST_ENDPOINT", rest_endpoint)
+	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_KEY", "")
+	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_SECRET", api_secret)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,

@@ -10,20 +10,17 @@ import (
 	"time"
 )
 
-// Client -
 type Client struct {
 	HostURL    string
 	HTTPClient *http.Client
 	Auth       AuthStruct
 }
 
-// AuthStruct -
 type AuthStruct struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
-// NewClient -
 func NewClient(HostURL, username, password *string) (*Client, error) {
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
