@@ -4,7 +4,6 @@
 package provider
 
 import (
-	"os"
 	"regexp"
 	"testing"
 

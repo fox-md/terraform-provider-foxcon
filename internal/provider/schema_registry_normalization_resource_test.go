@@ -5,7 +5,6 @@ package provider
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"testing"
 
