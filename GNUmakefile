@@ -24,15 +24,15 @@ fmt:
 # test:
 # 	go test -v -cover -timeout=120s -parallel=10 ./...
 
-test: pretest
+test: down pretest
 	TF_ACC=1 go test ./... -count=1  -v -cover -timeout=120s -parallel=10
 
 testacc:
 	TF_ACC=1 go test -v -cover -timeout 120m ./...
 
-pretest: restart populate
+pretest: checkup populate
 
-restart: down up
+checkup: up
 	@for i in {1..10}; do code=$$(curl -LI -u "admin:admin-secret" http://localhost:8081 -o /dev/null -w '%{http_code}' -s);if [ "$$code" -eq 200 ]; then echo "Schema is UP" && exit 0; else sleep 5; fi; done; echo "Schema is DOWN" && exit 1
 
 up:
