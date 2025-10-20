@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 
-	//"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -245,7 +244,7 @@ func (r *subjectNormalizationResource) Update(ctx context.Context, req resource.
 	}
 
 	if subjectConfig != nil {
-		_, attrs = parseResponseAttrs(subjectConfig)
+		attrs = parseResponseAttrs(subjectConfig)
 	}
 
 	if plan.Normalize.IsNull() {
@@ -337,7 +336,7 @@ func (r *subjectNormalizationResource) Delete(ctx context.Context, req resource.
 	if subjectConfig == nil {
 		return
 	} else {
-		_, attrs = parseResponseAttrs(subjectConfig)
+		attrs = parseResponseAttrs(subjectConfig)
 	}
 
 	if *subjectConfig.CompatibilityLevel == *schemaRegistryConfig.CompatibilityLevel &&
@@ -447,7 +446,7 @@ func (r *subjectNormalizationResource) ImportState(ctx context.Context, req reso
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials"), credentials)...)
 }
 
-func parseResponseAttrs(resp *SchemaConfigResponse) (int, []string) {
+func parseResponseAttrs(resp *SchemaConfigResponse) ([]string) {
 	count := 0
 	var attrs []string
 	if resp.Alias != nil {
@@ -483,7 +482,7 @@ func parseResponseAttrs(resp *SchemaConfigResponse) (int, []string) {
 		attrs = append(attrs, "overrideRuleSet")
 	}
 	sort.Strings(attrs)
-	return count, attrs
+	return attrs
 }
 
 // func parseResponseAttrs(config *SchemaConfigResponse) (int, []string) {
