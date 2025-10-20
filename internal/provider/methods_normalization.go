@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func SetNormalization(client *Client, subject_name string, payload NormalizeRequest) (*NormalizeResponse, error) {
+func SetSubjectConfig(client *Client, subject_name string, payload NormalizeRequest) (*NormalizeResponse, error) {
 	rb, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func SetNormalization(client *Client, subject_name string, payload NormalizeRequ
 	return &response, nil
 }
 
-func GetSchemaConfig(client *Client, subject_name string) (*SchemaConfigResponse, error) {
+func GetSubjectConfig(client *Client, subject_name string) (*SchemaConfigResponse, error) {
 
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/config/%s", client.HostURL, subject_name), nil)
 	if err != nil {
@@ -70,7 +70,7 @@ func GetSchemaConfig(client *Client, subject_name string) (*SchemaConfigResponse
 	}
 
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to update subject configuration. Response code %d", res.StatusCode)
+		return nil, fmt.Errorf("failed to get subject configuration. Response code %d", res.StatusCode)
 	}
 
 	body, err := io.ReadAll(res.Body)

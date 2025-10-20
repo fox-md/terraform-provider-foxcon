@@ -45,15 +45,6 @@ func (r *userResource) Metadata(_ context.Context, req resource.MetadataRequest,
 func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			// "user_email": schema.StringAttribute{
-			// 	Required: true,
-			// },
-			// "user_id": schema.StringAttribute{
-			// 	Computed: true,
-			// },
-			// "invitation_id": schema.StringAttribute{
-			// 	Computed: true,
-			// },
 			"invitation_id": schema.StringAttribute{
 				Optional: true,
 				Computed: true,
@@ -64,7 +55,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 						path.MatchRoot("user_id"),
 					),
 				},
-				Description: "User invitation id",
+				Description: "Confluent invitation id.",
 			},
 			"user_email": schema.StringAttribute{
 				Optional: true,
@@ -76,7 +67,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 						path.MatchRoot("user_id"),
 					),
 				},
-				Description: "User email address",
+				Description: "User email address.",
 			},
 			"user_id": schema.StringAttribute{
 				Optional: true,
@@ -88,12 +79,14 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 						path.MatchRoot("user_id"),
 					),
 				},
-				Description: "User Id",
+				Description: "Confluent user id.",
 			},
 			"last_updated": schema.StringAttribute{
-				Computed: true,
+				Computed:    true,
+				Description: "Timestamp of the last apply execution.",
 			},
 		},
+		MarkdownDescription: "Gets user id, user email and invitation id by setting one of this parameters. On deletion, resource also removes user from Confluent Cloud.",
 	}
 }
 
@@ -102,6 +95,8 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	// Retrieve values from plan
 	var plan userResourceModel
+	var searchType string
+	var searchValue string
 	var invitation *Invitation
 	var err error
 
@@ -112,22 +107,35 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	if !plan.InvitationId.IsNull() && !plan.InvitationId.IsUnknown() {
+		searchType = "invitation_id"
+		searchValue = plan.InvitationId.ValueString()
 		invitation, err = r.client.GetUserInvitationById(plan.InvitationId.ValueString())
 	}
 
 	if !plan.UserEmail.IsNull() && !plan.UserEmail.IsUnknown() {
+		searchType = "user_email"
+		searchValue = plan.UserEmail.ValueString()
 		invitation, err = r.client.GetUserInvitationByParameter("email", plan.UserEmail.ValueString())
 	}
 
 	if !plan.UserId.IsNull() && !plan.UserId.IsUnknown() {
+		searchType = "user_id"
+		searchValue = plan.UserId.ValueString()
 		invitation, err = r.client.GetUserInvitationByParameter("user", plan.UserId.ValueString())
 	}
 
-	//invitation, err = r.client.GetUserInvitationByParameter("email", plan.InvitationId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading invitation",
-			"Could not read invitation unexpected error: "+err.Error(),
+			fmt.Sprintf("Could not read invitation for %s by %s type. Unexpected error: %s", searchValue, searchType, err.Error()),
+		)
+		return
+	}
+
+	if invitation == nil {
+		resp.Diagnostics.AddError(
+			"Invitation not found",
+			fmt.Sprintf("Invitation not found for %s by %s type.", searchValue, searchType),
 		)
 		return
 	}
@@ -151,6 +159,8 @@ func (r *userResource) Create(ctx context.Context, req resource.CreateRequest, r
 func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Get current state
 	var state userResourceModel
+	var searchType string
+	var searchValue string
 	var invitation *Invitation
 	var err error
 
@@ -161,29 +171,38 @@ func (r *userResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	if !state.InvitationId.IsNull() {
+		searchType = "invitation_id"
+		searchValue = state.InvitationId.ValueString()
 		invitation, err = r.client.GetUserInvitationById(state.InvitationId.ValueString())
 	}
 
 	if !state.UserEmail.IsNull() {
+		searchType = "user_email"
+		searchValue = state.InvitationId.ValueString()
 		invitation, err = r.client.GetUserInvitationByParameter("email", state.UserEmail.ValueString())
 	}
 
 	if !state.UserId.IsNull() {
+		searchType = "user_id"
+		searchValue = state.InvitationId.ValueString()
 		invitation, err = r.client.GetUserInvitationByParameter("user", state.UserId.ValueString())
 	}
 
-	//invitation, err = r.client.GetUserInvitationByParameter("email", state.UserEmail.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error Reading Confluent User by email",
-			"Could not read Confluent User info by email "+state.UserEmail.ValueString()+": "+err.Error(),
+			"Error Reading Confluent invitation",
+			fmt.Sprintf("Could not read invitation for %s by %s. Unexpected error: %s", searchValue, searchType, err.Error()),
 		)
 		return
 	}
 
 	if invitation == nil {
-		tflog.Debug(ctx, fmt.Sprintf("User with invitation ID %s does not exist in Confluent. Removing resource from state file.", state.InvitationId.ValueString()))
+		tflog.Debug(ctx, fmt.Sprintf("User with %s of type %s does not exist in Confluent. Removing resource from state file.", searchValue, searchType))
 		resp.State.RemoveResource(ctx)
+		resp.Diagnostics.AddWarning(
+			"User does not exist in Confluent",
+			fmt.Sprintf("User with %s of type %s does not exist in Confluent. Removing resource from state file.", searchValue, searchType),
+		)
 		return
 	}
 
@@ -226,7 +245,6 @@ func (r *userResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		invitation, err = r.client.GetUserInvitationByParameter("user", plan.UserId.ValueString())
 	}
 
-	//invitation, err = r.client.GetUserInvitationByParameter("email", plan.UserEmail.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading invitation",
@@ -294,7 +312,7 @@ func (r *userResource) Configure(_ context.Context, req resource.ConfigureReques
 func (r *userResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resp.Diagnostics.AddError(
 		"Import not implemented",
-		"Import for this resource is not available since resources itself performs read operation on create",
+		"Import for this resource is not available since the resource itself performs read operation on create",
 	)
 
 	// resource.ImportStatePassthroughID(ctx, path.Root("user_email"), req, resp)

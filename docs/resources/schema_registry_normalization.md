@@ -3,12 +3,12 @@
 page_title: "foxcon_schema_registry_normalization Resource - foxcon"
 subcategory: ""
 description: |-
-  
+  Sets schema registry normalization value.
 ---
 
 # foxcon_schema_registry_normalization (Resource)
 
-
+Sets schema registry normalization value.
 
 ## Example Usage
 
@@ -37,15 +37,15 @@ resource "foxcon_schema_registry_normalization" "test" {
 
 ### Read-Only
 
-- `last_updated` (String)
+- `last_updated` (String) Timestamp of the last apply execution.
 
 <a id="nestedblock--credentials"></a>
 ### Nested Schema for `credentials`
 
 Required:
 
-- `key` (String)
-- `secret` (String, Sensitive)
+- `key` (String) Schema registry user.
+- `secret` (String, Sensitive) Schema registry secret.
 
 ## Import
 

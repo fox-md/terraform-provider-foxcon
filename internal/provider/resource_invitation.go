@@ -47,7 +47,7 @@ func (r *invitationResource) Schema(_ context.Context, _ resource.SchemaRequest,
 		Attributes: map[string]schema.Attribute{
 			"email": schema.StringAttribute{
 				Required:    true,
-				Description: "The user/invitee's email address.",
+				Description: "User's/invitee's email address.",
 			},
 			"auth_type": schema.StringAttribute{
 				Optional: true,
@@ -56,18 +56,22 @@ func (r *invitationResource) Schema(_ context.Context, _ resource.SchemaRequest,
 					stringvalidator.OneOf("AUTH_TYPE_SSO", "AUTH_TYPE_LOCAL"),
 				},
 				Default:     stringdefault.StaticString("AUTH_TYPE_SSO"),
-				Description: "The user/invitee's authentication type. Must be set to `AUTH_TYPE_SSO` or `AUTH_TYPE_LOCAL`. Defauts to `AUTH_TYPE_SSO`.",
+				Description: "User's/invitee's authentication type. Must be set to `AUTH_TYPE_SSO` or `AUTH_TYPE_LOCAL`. Defauts to `AUTH_TYPE_SSO`.",
 			},
 			"invitation_id": schema.StringAttribute{
-				Computed: true,
+				Computed:    true,
+				Description: "Confluent invitation id.",
 			},
 			"user_id": schema.StringAttribute{
-				Computed: true,
+				Computed:    true,
+				Description: "Confluent user id.",
 			},
 			"last_updated": schema.StringAttribute{
-				Computed: true,
+				Computed:    true,
+				Description: "Timestamp of the last apply execution.",
 			},
 		},
+		MarkdownDescription: "Provides an invitation resource that enables creating, reading, and deleting invitation on Confluent Cloud. On deleting invitation also deletes user from Confluent Cloud.",
 	}
 }
 

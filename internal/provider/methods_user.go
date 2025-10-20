@@ -30,7 +30,7 @@ func (c *Client) DeleteUser(userID string) error {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("unexpected response code received on DELETE request. Expected %d Received %d", http.StatusNoContent, res.StatusCode)
+		return fmt.Errorf("unexpected response code received on User DELETE request. Expected %d Received %d", http.StatusNoContent, res.StatusCode)
 	}
 
 	return nil
@@ -60,6 +60,10 @@ func (c *Client) ReadUser(userId string) (*User, error) {
 
 	if res.StatusCode == http.StatusNotFound {
 		return nil, nil
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected response code received on User DELETE request. Expected %d Received %d", http.StatusOK, res.StatusCode)
 	}
 
 	err = json.Unmarshal(body, &user)

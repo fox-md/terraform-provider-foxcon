@@ -1,0 +1,13 @@
+
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Message",
+    "type": "object",
+    "additionalProperties": true,
+    "properties": {
+      "messageCreateTime": { "type": "string" },
+      "messageType": { "type": "string" },
+      "sourceApplication": { "type": "string" },
+      "targetApplication": { "type": "string" }
+    }
+}

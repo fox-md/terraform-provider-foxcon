@@ -7,13 +7,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
+	"sort"
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 
-	// "github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault".
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -70,7 +71,8 @@ func (r *subjectNormalizationResource) Schema(_ context.Context, _ resource.Sche
 			// 	},
 			// },
 			"last_updated": schema.StringAttribute{
-				Computed: true,
+				Computed:    true,
+				Description: "Timestamp of the last apply execution.",
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -86,6 +88,7 @@ func (r *subjectNormalizationResource) Schema(_ context.Context, _ resource.Sche
 				},
 			},
 		},
+		MarkdownDescription: "Sets subject normalization value",
 	}
 }
 
@@ -96,11 +99,6 @@ type subjectNormalizationResourceModel struct {
 	Credentials  *credentialsModel `tfsdk:"credentials"`
 	LastUpdated  types.String      `tfsdk:"last_updated"`
 }
-
-// type credentialsModel struct {
-// 	Key    types.String `tfsdk:"key"`
-// 	Secret types.String `tfsdk:"secret"`
-// }
 
 // Create creates the resource and sets the initial Terraform state.
 // Create a new resource.
@@ -135,7 +133,7 @@ func (r *subjectNormalizationResource) Create(ctx context.Context, req resource.
 	}
 
 	// Set Normalization
-	subjectConfig, err := SetNormalization(schemaAPIClient, plan.SubjectName.ValueString(), normalizationPayload)
+	subjectConfig, err := SetSubjectConfig(schemaAPIClient, plan.SubjectName.ValueString(), normalizationPayload)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error setting normalization",
@@ -177,7 +175,7 @@ func (r *subjectNormalizationResource) Read(ctx context.Context, req resource.Re
 	}
 
 	// Get subject config
-	subjectConfig, err := GetSchemaConfig(schemaAPIClient, state.SubjectName.ValueString())
+	subjectConfig, err := GetSubjectConfig(schemaAPIClient, state.SubjectName.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Subject config",
@@ -187,14 +185,12 @@ func (r *subjectNormalizationResource) Read(ctx context.Context, req resource.Re
 	}
 
 	if subjectConfig == nil {
-		tflog.Debug(ctx, fmt.Sprintf("%s subject config does not exist in Confluent. Removing resource from state file.", state.SubjectName.ValueString()))
-		resp.State.RemoveResource(ctx)
-		return
+		state.Normalize = types.BoolNull()
+	} else {
+		state.Normalize = types.BoolPointerValue(subjectConfig.Normalize)
 	}
 
 	// Overwrite items with refreshed state
-
-	state.Normalize = types.BoolPointerValue(subjectConfig.Normalize)
 	state.LastUpdated = types.StringValue(time.Now().Format(time.RFC3339))
 
 	// Set refreshed state
@@ -209,6 +205,9 @@ func (r *subjectNormalizationResource) Read(ctx context.Context, req resource.Re
 func (r *subjectNormalizationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Retrieve values from plan
 	var plan subjectNormalizationResourceModel
+	var normalizationPayload NormalizeRequest
+	var attrs []string
+
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -224,15 +223,18 @@ func (r *subjectNormalizationResource) Update(ctx context.Context, req resource.
 		return
 	}
 
-	var normalizationPayload NormalizeRequest
-
-	if plan.Normalize.IsNull() {
-		normalizationPayload.Normalize = nil
-	} else {
-		normalizationPayload.Normalize = plan.Normalize.ValueBoolPointer()
+	// Get schema registry config
+	schemaRegistryConfig, err := GetSubjectConfig(schemaAPIClient, "")
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Reading Schema config",
+			"Could not read Schema config:"+err.Error(),
+		)
+		return
 	}
 
-	subjectConfig, err := SetNormalization(schemaAPIClient, plan.SubjectName.ValueString(), normalizationPayload)
+	// Get subject config
+	subjectConfig, err := GetSubjectConfig(schemaAPIClient, plan.SubjectName.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Subject config",
@@ -241,8 +243,46 @@ func (r *subjectNormalizationResource) Update(ctx context.Context, req resource.
 		return
 	}
 
+	if subjectConfig != nil {
+		attrs = parseResponseAttrs(subjectConfig)
+	}
+
+	if plan.Normalize.IsNull() {
+		normalizationPayload.Normalize = nil
+	} else {
+		normalizationPayload.Normalize = plan.Normalize.ValueBoolPointer()
+	}
+
+	if plan.Normalize.IsNull() {
+		if *subjectConfig.CompatibilityLevel == *schemaRegistryConfig.CompatibilityLevel &&
+			(reflect.DeepEqual(attrs, []string{"compatibilityLevel", "normalize"}) ||
+				reflect.DeepEqual(attrs, []string{"compatibilityLevel"})) {
+
+			// Delete subject config as CompatibilityLevels are identical (being inherited) and the second remaining value must be normalize
+			tflog.Debug(ctx, fmt.Sprintf("Deleting entire %s subject config", plan.SubjectName.ValueString()))
+			err = DeleteSubjectConfig(schemaAPIClient, plan.SubjectName.ValueString())
+			if err != nil {
+				resp.Diagnostics.AddError(
+					"Error deleting subject configuration",
+					"Could not delete subject configuration: "+err.Error(),
+				)
+				return
+			}
+		}
+		plan.Normalize = types.BoolNull()
+	} else {
+		subjectConfig, err := SetSubjectConfig(schemaAPIClient, plan.SubjectName.ValueString(), normalizationPayload)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error Setting Subject config",
+				"Could not set Subject config "+plan.SubjectName.ValueString()+": "+err.Error(),
+			)
+			return
+		}
+		plan.Normalize = types.BoolPointerValue(subjectConfig.Normalize)
+	}
+
 	// Map response body to schema and populate Computed attribute values
-	plan.Normalize = types.BoolPointerValue(subjectConfig.Normalize)
 	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC3339))
 
 	diags = resp.State.Set(ctx, plan)
@@ -256,6 +296,8 @@ func (r *subjectNormalizationResource) Update(ctx context.Context, req resource.
 func (r *subjectNormalizationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	// Retrieve values from state
 	var state subjectNormalizationResourceModel
+	var attrs []string
+
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -263,7 +305,6 @@ func (r *subjectNormalizationResource) Delete(ctx context.Context, req resource.
 	}
 
 	schemaAPIClient, err := NewClient(state.RestEndpoint.ValueStringPointer(), state.Credentials.Key.ValueStringPointer(), state.Credentials.Secret.ValueStringPointer())
-
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -273,7 +314,7 @@ func (r *subjectNormalizationResource) Delete(ctx context.Context, req resource.
 	}
 
 	// Get schema registry config
-	schemaRegistryConfig, err := GetSchemaConfig(schemaAPIClient, "")
+	schemaRegistryConfig, err := GetSubjectConfig(schemaAPIClient, "")
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Schema config",
@@ -283,7 +324,7 @@ func (r *subjectNormalizationResource) Delete(ctx context.Context, req resource.
 	}
 
 	// Get subject config
-	subjectConfig, err := GetSchemaConfig(schemaAPIClient, state.SubjectName.ValueString())
+	subjectConfig, err := GetSubjectConfig(schemaAPIClient, state.SubjectName.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Subject config",
@@ -292,8 +333,17 @@ func (r *subjectNormalizationResource) Delete(ctx context.Context, req resource.
 		return
 	}
 
-	if *subjectConfig.CompatibilityLevel == *schemaRegistryConfig.CompatibilityLevel && countAttr(subjectConfig) < 3 {
-		// Delete subject config as CompatibilityLevels are identical (being inherited) and the second remaining value is normalize
+	if subjectConfig == nil {
+		return
+	} else {
+		attrs = parseResponseAttrs(subjectConfig)
+	}
+
+	if *subjectConfig.CompatibilityLevel == *schemaRegistryConfig.CompatibilityLevel &&
+		(reflect.DeepEqual(attrs, []string{"compatibilityLevel", "normalize"}) ||
+			reflect.DeepEqual(attrs, []string{"compatibilityLevel"})) {
+
+		// Delete subject config as CompatibilityLevels are identical (being inherited) and the second remaining value must be normalize
 		tflog.Debug(ctx, fmt.Sprintf("Deleting entire %s subject config", state.SubjectName.ValueString()))
 		err = DeleteSubjectConfig(schemaAPIClient, state.SubjectName.ValueString())
 		if err != nil {
@@ -310,7 +360,7 @@ func (r *subjectNormalizationResource) Delete(ctx context.Context, req resource.
 			Normalize: nil,
 		}
 
-		_, err = SetNormalization(schemaAPIClient, state.SubjectName.ValueString(), normalizationPayload)
+		_, err = SetSubjectConfig(schemaAPIClient, state.SubjectName.ValueString(), normalizationPayload)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Error setting normalization value to null",
@@ -396,31 +446,56 @@ func (r *subjectNormalizationResource) ImportState(ctx context.Context, req reso
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials"), credentials)...)
 }
 
-func countAttr(resp *SchemaConfigResponse) int {
-	count := 0
+func parseResponseAttrs(resp *SchemaConfigResponse) []string {
+	var attrs []string
 	if resp.Alias != nil {
-		count++
+		attrs = append(attrs, "alias")
 	}
 	if resp.Normalize != nil {
-		count++
+		attrs = append(attrs, "normalize")
 	}
 	if resp.CompatibilityLevel != nil {
-		count++
+		attrs = append(attrs, "compatibilityLevel")
 	}
 	if resp.CompatibilityGroup != nil {
-		count++
+		attrs = append(attrs, "compatibilityGroup")
 	}
 	if resp.DefaultMetadata != nil {
-		count++
+		attrs = append(attrs, "defaultMetadata")
 	}
 	if resp.OverrideMetadata != nil {
-		count++
+		attrs = append(attrs, "overrideMetadata")
 	}
 	if resp.DefaultRuleSet != nil {
-		count++
+		attrs = append(attrs, "defaultRuleSet")
 	}
 	if resp.OverrideRuleSet != nil {
-		count++
+		attrs = append(attrs, "overrideRuleSet")
 	}
-	return count
+	sort.Strings(attrs)
+	return attrs
 }
+
+// func parseResponseAttrs(config *SchemaConfigResponse) (int, []string) {
+// 	count := 0
+// 	var attrs []string
+// 	v := reflect.ValueOf(config)
+// 	t := reflect.TypeOf(config)
+
+// 	if v.Kind() == reflect.Ptr {
+// 		v = v.Elem()
+// 		t = t.Elem()
+// 	}
+
+// 	for i := 0; i < v.NumField(); i++ {
+// 		fieldValue := v.Field(i)
+// 		fieldType := t.Field(i)
+
+// 		if fieldValue.Kind() == reflect.Ptr && !fieldValue.IsNil() {
+// 			count++
+// 			attrs = append(attrs, fieldType.Name)
+// 		}
+// 	}
+// 	sort.Strings(attrs)
+// 	return count, attrs
+// }

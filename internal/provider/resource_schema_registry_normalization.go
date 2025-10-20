@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 
-	// "github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault".
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -65,22 +64,26 @@ func (r *schemaRegistryNormalizationResource) Schema(_ context.Context, _ resour
 			// 	},
 			// },
 			"last_updated": schema.StringAttribute{
-				Computed: true,
+				Computed:    true,
+				Description: "Timestamp of the last apply execution.",
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"credentials": schema.SingleNestedBlock{
 				Attributes: map[string]schema.Attribute{
 					"key": schema.StringAttribute{
-						Required: true,
+						Required:    true,
+						Description: "Schema registry user.",
 					},
 					"secret": schema.StringAttribute{
-						Required:  true,
-						Sensitive: true,
+						Required:    true,
+						Sensitive:   true,
+						Description: "Schema registry secret.",
 					},
 				},
 			},
 		},
+		MarkdownDescription: "Sets schema registry normalization value.",
 	}
 }
 
@@ -116,7 +119,7 @@ func (r *schemaRegistryNormalizationResource) Create(ctx context.Context, req re
 	}
 
 	// Set Normalization
-	schemaConfig, err := SetNormalization(schemaAPIClient, "", normalizationPayload)
+	schemaConfig, err := SetSubjectConfig(schemaAPIClient, "", normalizationPayload)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error setting normalization",
@@ -158,7 +161,7 @@ func (r *schemaRegistryNormalizationResource) Read(ctx context.Context, req reso
 	}
 
 	// Get schema config
-	schemaConfig, err := GetSchemaConfig(schemaAPIClient, "")
+	schemaConfig, err := GetSubjectConfig(schemaAPIClient, "")
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Schema config",
@@ -202,11 +205,11 @@ func (r *schemaRegistryNormalizationResource) Update(ctx context.Context, req re
 		Normalize: plan.Normalize.ValueBoolPointer(),
 	}
 
-	schemaConfig, err := SetNormalization(schemaAPIClient, "", normalizationPayload)
+	schemaConfig, err := SetSubjectConfig(schemaAPIClient, "", normalizationPayload)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error Reading Schema config",
-			"Could not read Schema config :"+err.Error(),
+			"Error Setting Subject config",
+			"Could not set Subject config :"+err.Error(),
 		)
 		return
 	}
@@ -233,7 +236,6 @@ func (r *schemaRegistryNormalizationResource) Delete(ctx context.Context, req re
 	}
 
 	schemaAPIClient, err := NewClient(state.RestEndpoint.ValueStringPointer(), state.Credentials.Key.ValueStringPointer(), state.Credentials.Secret.ValueStringPointer())
-
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -249,7 +251,7 @@ func (r *schemaRegistryNormalizationResource) Delete(ctx context.Context, req re
 		Normalize: nil,
 	}
 
-	_, err = SetNormalization(schemaAPIClient, "", normalizationPayload)
+	_, err = SetSubjectConfig(schemaAPIClient, "", normalizationPayload)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error setting normalization value to null",
