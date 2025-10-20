@@ -217,7 +217,7 @@ resource "foxcon_subject_cleanup" "latest" {
 					output, err = cmd.CombinedOutput()
 					if err != nil {
 						fmt.Printf("Command output:\n%s\n", string(output))
-						fmt.Printf("error:" + err.Error())
+						fmt.Printf("error: %s", err.Error())
 						//panic("error:" + err.Error())
 					}
 				},
@@ -293,7 +293,7 @@ resource "foxcon_subject_cleanup" "latest" {
 					output, err = cmd.CombinedOutput()
 					if err != nil {
 						fmt.Printf("Command output:\n%s\n", string(output))
-						fmt.Printf("error:" + err.Error())
+						fmt.Printf("error: %s", err.Error())
 						//panic("error:" + err.Error())
 					}
 				},
