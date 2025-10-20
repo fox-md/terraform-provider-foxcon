@@ -3,12 +3,12 @@
 page_title: "foxcon_subject_normalization Resource - foxcon"
 subcategory: ""
 description: |-
-  
+  Sets subject normalization value
 ---
 
 # foxcon_subject_normalization (Resource)
 
-
+Sets subject normalization value
 
 ## Example Usage
 
@@ -39,7 +39,7 @@ resource "foxcon_subject_normalization" "test" {
 
 ### Read-Only
 
-- `last_updated` (String)
+- `last_updated` (String) Timestamp of the last apply execution.
 
 <a id="nestedblock--credentials"></a>
 ### Nested Schema for `credentials`

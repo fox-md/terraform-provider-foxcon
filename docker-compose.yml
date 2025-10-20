@@ -35,12 +35,6 @@ services:
     image: confluentinc/cp-schema-registry:8.0.0
     hostname: schema-registry
     container_name: schema-registry
-    healthcheck:
-      test: ["CMD", "curl", "-f", "-u", "admin:admin-secret", "http://localhost:8081"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 30s
     depends_on:
       - broker
     ports:

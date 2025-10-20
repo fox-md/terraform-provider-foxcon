@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-const ApiEndpoint string = "https://api.confluent.cloud"
+const ConfluentCloudApiEndpoint string = "https://api.confluent.cloud"
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
@@ -49,10 +49,19 @@ func (p *foxconProvider) Metadata(_ context.Context, _ provider.MetadataRequest,
 // Schema defines the provider-level schema for configuration data.
 func (p *foxconProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "`foxcon` provider extends Confluent official [confluentinc/confluent](https://registry.terraform.io/providers/confluentinc/confluent/latest/docs) provider.\n\n" +
+			"`foxcon` includes below resources:" +
+			`
+- Normalization configuration for subject.
+- Normalization configuration for schema registry.
+- Confluent invitation resource that acts as original, however also deletes user from Confluent on resource deletion.
+- &#96;foxcon_confluent_read_user&#96; that reads user details from Confluent on resources creation and deletes user from Confluent on resource deletion.
+- Cleanup of schema versions. Can be performed for soft-deleted or all non-latest versions.
+			`,
 		Attributes: map[string]schema.Attribute{
 			"api_endpoint": schema.StringAttribute{
 				Optional:    true,
-				Description: "Confluent API endpoint. Can be configured using `CONFLUENT_CLOUD_API_ENDPOINT` environment variable. Defaults to: " + ApiEndpoint,
+				Description: "Confluent API endpoint. Can be configured using `CONFLUENT_CLOUD_API_ENDPOINT` environment variable. Defaults to: " + ConfluentCloudApiEndpoint,
 			},
 			"cloud_api_key": schema.StringAttribute{
 				Optional:    true,
@@ -89,8 +98,8 @@ func (p *foxconProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		resp.Diagnostics.AddAttributeError(
 			path.Root("cloud_api_key"),
 			"Unknown Confluent API Key",
-			"The provider cannot create the HashiCups API client as there is an unknown configuration value for the HashiCups API username. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the HASHICUPS_USERNAME environment variable.",
+			"The provider cannot create the Confluent API client as there is an unknown configuration value for the Confluent API Key. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the CONFLUENT_CLOUD_API_KEY environment variable.",
 		)
 	}
 
@@ -98,8 +107,8 @@ func (p *foxconProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		resp.Diagnostics.AddAttributeError(
 			path.Root("cloud_api_secret"),
 			"Unknown Confluent API Secret",
-			"The provider cannot create the HashiCups API client as there is an unknown configuration value for the HashiCups API password. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the HASHICUPS_PASSWORD environment variable.",
+			"The provider cannot create the Confluent API client as there is an unknown configuration value for the Confluent API Secret. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the CONFLUENT_CLOUD_API_SECRET environment variable.",
 		)
 	}
 
@@ -127,7 +136,7 @@ func (p *foxconProvider) Configure(ctx context.Context, req provider.ConfigureRe
 	}
 
 	if api_endpoint == "" {
-		api_endpoint = ApiEndpoint
+		api_endpoint = ConfluentCloudApiEndpoint
 	}
 
 	// If any of the expected configurations are missing, return
@@ -187,7 +196,10 @@ func (p *foxconProvider) Configure(ctx context.Context, req provider.ConfigureRe
 
 // DataSources defines the data sources implemented in the provider.
 func (p *foxconProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{
+		NewSchemaRegistryNormalizationDataSource,
+		NewSubjectVersionsDataSource,
+	}
 }
 
 // Resources defines the resources implemented in the provider.
@@ -197,6 +209,7 @@ func (p *foxconProvider) Resources(_ context.Context) []func() resource.Resource
 		NewInvitationResource,
 		NewSubjectNormalizationResource,
 		NewSchemaRegistryNormalizationResource,
+		NewSubjectCleanupResource,
 	}
 }
 

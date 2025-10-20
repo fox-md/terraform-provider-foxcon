@@ -3,12 +3,12 @@
 page_title: "foxcon_confluent_invitation Resource - foxcon"
 subcategory: ""
 description: |-
-  
+  Provides an invitation resource that enables creating, reading, and deleting invitation on Confluent Cloud. On deleting invitation also deletes user from Confluent Cloud.
 ---
 
 # foxcon_confluent_invitation (Resource)
 
-
+Provides an invitation resource that enables creating, reading, and deleting invitation on Confluent Cloud. On deleting invitation also deletes user from Confluent Cloud.
 
 ## Example Usage
 
@@ -24,17 +24,17 @@ resource "foxcon_confluent_invitation" "this" {
 
 ### Required
 
-- `email` (String) The user/invitee's email address.
+- `email` (String) User's/invitee's email address.
 
 ### Optional
 
-- `auth_type` (String) The user/invitee's authentication type. Must be set to `AUTH_TYPE_SSO` or `AUTH_TYPE_LOCAL`. Defauts to `AUTH_TYPE_SSO`.
+- `auth_type` (String) User's/invitee's authentication type. Must be set to `AUTH_TYPE_SSO` or `AUTH_TYPE_LOCAL`. Defauts to `AUTH_TYPE_SSO`.
 
 ### Read-Only
 
-- `invitation_id` (String)
-- `last_updated` (String)
-- `user_id` (String)
+- `invitation_id` (String) Confluent invitation id.
+- `last_updated` (String) Timestamp of the last apply execution.
+- `user_id` (String) Confluent user id.
 
 ## Import
 

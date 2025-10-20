@@ -30,3 +30,11 @@ var (
 		"foxcon": providerserver.NewProtocol6WithError(New("test")()),
 	}
 )
+
+var rest_endpoint string = "http://localhost:8081"
+var api_key string = "admin"
+var api_secret string = "admin-secret"
+var subject_name string
+var subject_name_imported string = "test_import"
+var normalization_enabled_true string = "true"
+var normalization_enabled_false string = "false"
