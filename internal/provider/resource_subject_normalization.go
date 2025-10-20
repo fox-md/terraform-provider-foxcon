@@ -446,39 +446,30 @@ func (r *subjectNormalizationResource) ImportState(ctx context.Context, req reso
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials"), credentials)...)
 }
 
-func parseResponseAttrs(resp *SchemaConfigResponse) ([]string) {
-	count := 0
+func parseResponseAttrs(resp *SchemaConfigResponse) []string {
 	var attrs []string
 	if resp.Alias != nil {
-		count++
 		attrs = append(attrs, "alias")
 	}
 	if resp.Normalize != nil {
-		count++
 		attrs = append(attrs, "normalize")
 	}
 	if resp.CompatibilityLevel != nil {
-		count++
 		attrs = append(attrs, "compatibilityLevel")
 	}
 	if resp.CompatibilityGroup != nil {
-		count++
 		attrs = append(attrs, "compatibilityGroup")
 	}
 	if resp.DefaultMetadata != nil {
-		count++
 		attrs = append(attrs, "defaultMetadata")
 	}
 	if resp.OverrideMetadata != nil {
-		count++
 		attrs = append(attrs, "overrideMetadata")
 	}
 	if resp.DefaultRuleSet != nil {
-		count++
 		attrs = append(attrs, "defaultRuleSet")
 	}
 	if resp.OverrideRuleSet != nil {
-		count++
 		attrs = append(attrs, "overrideRuleSet")
 	}
 	sort.Strings(attrs)
