@@ -9,17 +9,20 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
-func TestSchemaNormalizationResourceCRUDHappyFlow(t *testing.T) {
+func TestSchemaRegistryNormalizationResourceCRUDHappyFlowWithProviderSwap(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_schema_registry_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   normalization_enabled = ` + normalization_enabled_true + `
@@ -36,27 +39,32 @@ resource "foxcon_schema_registry_normalization" "test" {
 					resource.TestCheckResourceAttrSet("foxcon_schema_registry_normalization.test", "last_updated"),
 				),
 			},
-			// Update and Read testing
 			{
-				Config: providerConfig + `
+				Config: schemaProviderConfig + `
 resource "foxcon_schema_registry_normalization" "test" {
-  rest_endpoint = "` + rest_endpoint + `"
   normalization_enabled = ` + normalization_enabled_false + `
-  credentials {
-    key = "` + api_key + `"
-    secret = "` + api_secret + `"
-  }
 }
 `,
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"foxcon_schema_registry_normalization.test",
+						tfjsonpath.New("rest_endpoint"),
+						knownvalue.Null(),
+					),
+					statecheck.ExpectKnownValue(
+						"foxcon_schema_registry_normalization.test",
+						tfjsonpath.New("credentials"),
+						knownvalue.Null(),
+					),
+				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("foxcon_schema_registry_normalization.test", "normalization_enabled", normalization_enabled_false),
-					resource.TestCheckResourceAttr("foxcon_schema_registry_normalization.test", "rest_endpoint", rest_endpoint),
 					// Verify dynamic values have any value set in the state.
 					resource.TestCheckResourceAttrSet("foxcon_schema_registry_normalization.test", "last_updated"),
 				),
 			},
 			{
-				Config: providerConfig + `
+				Config: schemaProviderConfig + `
 			resource "foxcon_schema_registry_normalization" "test" {
 			  rest_endpoint = "` + rest_endpoint + `"
 			  credentials {
@@ -85,12 +93,30 @@ resource "foxcon_schema_registry_normalization" "test" {
 					resource.TestCheckResourceAttrSet("foxcon_schema_registry_normalization.test", "last_updated"),
 				),
 			},
+			{
+				Config: cloudProviderConfig + `
+resource "foxcon_schema_registry_normalization" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  normalization_enabled = ` + normalization_enabled_true + `
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_schema_registry_normalization.test", "normalization_enabled", normalization_enabled_true),
+					resource.TestCheckResourceAttr("foxcon_schema_registry_normalization.test", "rest_endpoint", rest_endpoint),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_schema_registry_normalization.test", "last_updated"),
+				),
+			},
 			// Delete testing automatically occurs in TestCase
 		},
 	})
 }
 
-func TestSchemaNormalizationResourceImportHappyFlow(t *testing.T) {
+func TestSchemaRegistryNormalizationResourceImportHappyFlow(t *testing.T) {
 
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_REST_ENDPOINT", rest_endpoint)
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_KEY", api_key)
@@ -101,7 +127,7 @@ func TestSchemaNormalizationResourceImportHappyFlow(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Define resource
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_schema_registry_normalization" "test_import" {
   rest_endpoint = "` + rest_endpoint + `"
   normalization_enabled = ` + normalization_enabled_true + `
@@ -126,13 +152,13 @@ resource "foxcon_schema_registry_normalization" "test_import" {
 	})
 }
 
-func TestSchemaNormalizationResourceNoRestEndpointParameter(t *testing.T) {
+func TestSchemaRegistryNormalizationResourceNoRestEndpointParameter(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_schema_registry_normalization" "test" {
   normalization_enabled = ` + normalization_enabled_true + `
   credentials {
@@ -141,33 +167,33 @@ resource "foxcon_schema_registry_normalization" "test" {
   }
 }
 `,
-				ExpectError: regexp.MustCompile(`The argument "rest_endpoint" is required`),
+				ExpectError: regexp.MustCompile(`Missing Required Attribute "rest_endpoint"`),
 			},
 			// Delete testing automatically occurs in TestCase
 		},
 	})
 }
 
-func TestSchemaNormalizationResourceNoCredentialsConfigBlock(t *testing.T) {
+func TestSchemaRegistryNormalizationResourceNoCredentialsConfigBlock(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_schema_registry_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   normalization_enabled = ` + normalization_enabled_true + `
 }
 `,
-				ExpectError: regexp.MustCompile(`Missing Configuration for Required Attribute`),
+				ExpectError: regexp.MustCompile(`Error: Missing Required Attribute "credentials"`),
 			},
 		},
 	})
 }
 
-func TestSchemaNormalizationResourceImportNoRestEndpointSet(t *testing.T) {
+func TestSchemaRegistryNormalizationResourceImportNoRestEndpointSet(t *testing.T) {
 
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_REST_ENDPOINT", "")
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_KEY", api_key)
@@ -178,7 +204,7 @@ func TestSchemaNormalizationResourceImportNoRestEndpointSet(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Define resource
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_schema_registry_normalization" "test_import" {
   rest_endpoint = "` + rest_endpoint + `"
   normalization_enabled = ` + normalization_enabled_true + `
@@ -203,7 +229,7 @@ resource "foxcon_schema_registry_normalization" "test_import" {
 	})
 }
 
-func TestSchemaNormalizationResourceImportNoApiSecretSet(t *testing.T) {
+func TestSchemaRegistryNormalizationResourceImportNoApiSecretSet(t *testing.T) {
 
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_REST_ENDPOINT", rest_endpoint)
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_KEY", api_key)
@@ -214,7 +240,7 @@ func TestSchemaNormalizationResourceImportNoApiSecretSet(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Define resource
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_schema_registry_normalization" "test_import" {
   rest_endpoint = "` + rest_endpoint + `"
   normalization_enabled = ` + normalization_enabled_true + `
@@ -239,7 +265,7 @@ resource "foxcon_schema_registry_normalization" "test_import" {
 	})
 }
 
-func TestSchemaNormalizationResourceImportNoApiKeySet(t *testing.T) {
+func TestSchemaRegistryNormalizationResourceImportNoApiKeySet(t *testing.T) {
 
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_REST_ENDPOINT", rest_endpoint)
 	t.Setenv("IMPORT_SCHEMA_REGISTRY_API_KEY", "")
@@ -250,7 +276,7 @@ func TestSchemaNormalizationResourceImportNoApiKeySet(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Define resource
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_schema_registry_normalization" "test_import" {
   rest_endpoint = "` + rest_endpoint + `"
   normalization_enabled = ` + normalization_enabled_true + `
@@ -271,6 +297,55 @@ resource "foxcon_schema_registry_normalization" "test_import" {
 				ExpectError:     regexp.MustCompile(`'IMPORT_SCHEMA_REGISTRY_API_KEY' environment variable is not configured`),
 			},
 			// Delete testing automatically occurs in TestCase
+		},
+	})
+}
+
+func TestSchemaRegistryNormalizationProviderConfiguredWithEnvVars(t *testing.T) {
+
+	t.Setenv("SCHEMA_REGISTRY_REST_ENDPOINT", rest_endpoint)
+	t.Setenv("SCHEMA_REGISTRY_API_KEY", api_key)
+	t.Setenv("SCHEMA_REGISTRY_API_SECRET", api_secret)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Define resource
+			{
+				Config: emptyProviderConfig + `
+resource "foxcon_schema_registry_normalization" "test" {
+  normalization_enabled = ` + normalization_enabled_true + `
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_schema_registry_normalization.test", "normalization_enabled", normalization_enabled_true),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_schema_registry_normalization.test", "last_updated"),
+				),
+			},
+		},
+	})
+}
+
+func TestSchemaRegistryNormalizationResourceWrongCredentials(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: schemaProviderWrongConfig + `
+resource "foxcon_schema_registry_normalization" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  normalization_enabled = ` + normalization_enabled_true + `
+  credentials {
+    key = "dummy_value"
+    secret = "dummy_value"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`Response code 401`),
+			},
 		},
 	})
 }

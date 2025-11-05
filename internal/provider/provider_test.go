@@ -9,14 +9,21 @@ import (
 )
 
 const (
-	// providerConfig is a shared configuration to combine with the actual
-	// test configuration so the HashiCups client is properly configured.
-	// It is also possible to use the HASHICUPS_ environment variables instead,
-	// such as updating the Makefile and running the testing through that tool.
-	providerConfig = `
+	cloudProviderConfig = `
 provider "foxcon" {
   cloud_api_key = "test"
   cloud_api_secret = "test"
+}
+`
+	emptyProviderConfig = `
+provider "foxcon" {
+}
+`
+	schemaProviderWrongConfig = `
+provider "foxcon" {
+  schema_registry_rest_endpoint = "http://1.1.1.1"
+  schema_registry_api_key = "dummy_value"
+  schema_registry_api_secret = "dummy_value"
 }
 `
 )
@@ -38,3 +45,11 @@ var subject_name string
 var subject_name_imported string = "test_import"
 var normalization_enabled_true string = "true"
 var normalization_enabled_false string = "false"
+
+var schemaProviderConfig = `
+provider "foxcon" {
+  schema_registry_rest_endpoint = "` + rest_endpoint + `"
+  schema_registry_api_key = "` + api_key + `"
+  schema_registry_api_secret = "` + api_secret + `"
+}
+`

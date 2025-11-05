@@ -27,7 +27,7 @@ func TestSubjectNormalizationResourceTrueToFalse(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -48,7 +48,7 @@ resource "foxcon_subject_normalization" "test" {
 			},
 			// Update and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -81,7 +81,7 @@ func TestSubjectNormalizationResourceFalseToTrueToNull(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -102,7 +102,7 @@ resource "foxcon_subject_normalization" "test" {
 			},
 			// Update and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -122,7 +122,7 @@ resource "foxcon_subject_normalization" "test" {
 				),
 			},
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -181,7 +181,7 @@ func TestSubjectNormalizationResourceNullToFalse(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -206,7 +206,7 @@ resource "foxcon_subject_normalization" "test" {
 				),
 			},
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -238,7 +238,7 @@ func TestSubjectNormalizationResourceSubjectConfigDeletionOnDelete(t *testing.T)
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -258,7 +258,7 @@ resource "foxcon_subject_normalization" "test" {
 				),
 			},
 			{
-				Config: providerConfig + "",
+				Config: cloudProviderConfig + "",
 				Check: resource.ComposeTestCheckFunc(
 					func(s *terraform.State) error {
 						req, _ := http.NewRequest("GET", fmt.Sprintf("%s/config/%s", rest_endpoint, subject_name), nil)
@@ -291,7 +291,7 @@ func TestSubjectNormalizationResourceKeepSubjectConfigOnDelete(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -328,7 +328,7 @@ resource "foxcon_subject_normalization" "test" {
 					}
 
 				},
-				Config: providerConfig + "",
+				Config: cloudProviderConfig + "",
 				Check: resource.ComposeTestCheckFunc(
 					func(s *terraform.State) error {
 						req, _ := http.NewRequest("GET", fmt.Sprintf("%s/config/%s", rest_endpoint, subject_name), nil)
@@ -360,7 +360,7 @@ func TestSubjectNormalizationResourceKeepSubjectConfigOnDeleteFullCompatLevel(t 
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -397,7 +397,7 @@ resource "foxcon_subject_normalization" "test" {
 					}
 
 				},
-				Config: providerConfig + "",
+				Config: cloudProviderConfig + "",
 				Check: resource.ComposeTestCheckFunc(
 					func(s *terraform.State) error {
 						req, _ := http.NewRequest("GET", fmt.Sprintf("%s/config/%s", rest_endpoint, subject_name), nil)
@@ -430,7 +430,7 @@ func TestSubjectNormalizationResourceImportHappyFlow(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Define resource
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test_import" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name_imported + `"
@@ -462,7 +462,7 @@ func TestSubjectNormalizationResourceNoSubjectNameParameter(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   normalization_enabled = ` + normalization_enabled_true + `
@@ -484,7 +484,7 @@ func TestSubjectNormalizationResourceNoRestEndpointParameter(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test" {
   subject_name = "` + subject_name + `"
   normalization_enabled = ` + normalization_enabled_true + `
@@ -494,7 +494,7 @@ resource "foxcon_subject_normalization" "test" {
   }
 }
 `,
-				ExpectError: regexp.MustCompile(`The argument "rest_endpoint" is required`),
+				ExpectError: regexp.MustCompile(`Missing Required Attribute "rest_endpoint"`),
 			},
 			// Delete testing automatically occurs in TestCase
 		},
@@ -508,14 +508,59 @@ func TestSubjectNormalizationResourceNoCredentialsConfigBlock(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
   normalization_enabled = ` + normalization_enabled_true + `
 }
 `,
-				ExpectError: regexp.MustCompile(`Missing Configuration for Required Attribute`),
+				ExpectError: regexp.MustCompile(`Missing Required Attribute "credentials"`),
+			},
+		},
+	})
+}
+
+func TestSubjectNormalizationResourceNoCredentialsKey(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_normalization" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  normalization_enabled = ` + normalization_enabled_true + `
+  credentials {
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`Missing Required Attribute "credentials.key"`),
+			},
+			// Delete testing automatically occurs in TestCase
+		},
+	})
+}
+
+func TestSubjectNormalizationResourceNoCredentialsSecret(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_normalization" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  normalization_enabled = ` + normalization_enabled_true + `
+  credentials {
+    key = "` + api_key + `"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`Missing Required Attribute "credentials.secret"`),
 			},
 		},
 	})
@@ -532,7 +577,7 @@ func TestSubjectNormalizationResourceImportNoRestEndpointSet(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Define resource
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test_import" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name_imported + `"
@@ -555,7 +600,6 @@ resource "foxcon_subject_normalization" "test_import" {
 				//ImportStateVerifyIgnore: []string{"last_updated"},
 				ExpectError: regexp.MustCompile(`'IMPORT_SCHEMA_REGISTRY_REST_ENDPOINT' environment variable is not configured`),
 			},
-			// Delete testing automatically occurs in TestCase
 		},
 	})
 }
@@ -571,7 +615,7 @@ func TestSubjectNormalizationResourceImportNoApiSecretSet(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Define resource
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test_import" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name_imported + `"
@@ -594,7 +638,6 @@ resource "foxcon_subject_normalization" "test_import" {
 				//ImportStateVerifyIgnore: []string{"last_updated"},
 				ExpectError: regexp.MustCompile(`'IMPORT_SCHEMA_REGISTRY_API_SECRET' environment variable is not configured`),
 			},
-			// Delete testing automatically occurs in TestCase
 		},
 	})
 }
@@ -610,7 +653,7 @@ func TestSubjectNormalizationResourceImportNoApiKeySet(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Define resource
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_normalization" "test_import" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name_imported + `"
@@ -633,7 +676,176 @@ resource "foxcon_subject_normalization" "test_import" {
 				//ImportStateVerifyIgnore: []string{"last_updated"},
 				ExpectError: regexp.MustCompile(`'IMPORT_SCHEMA_REGISTRY_API_KEY' environment variable is not configured`),
 			},
-			// Delete testing automatically occurs in TestCase
+		},
+	})
+}
+
+func TestSubjectNormalizationProviderWrongConfig(t *testing.T) {
+
+	subject_name = "provider-wrong-config"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: schemaProviderWrongConfig + `
+resource "foxcon_subject_normalization" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  normalization_enabled = ` + normalization_enabled_true + `
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_subject_normalization.test", "subject_name", subject_name),
+					resource.TestCheckResourceAttr("foxcon_subject_normalization.test", "normalization_enabled", normalization_enabled_true),
+					resource.TestCheckResourceAttr("foxcon_subject_normalization.test", "rest_endpoint", rest_endpoint),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_subject_normalization.test", "last_updated"),
+				),
+			},
+		},
+	})
+}
+
+func TestSubjectNormalizationProviderEmptyConfig(t *testing.T) {
+
+	subject_name = "provider-empty-config"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: emptyProviderConfig + `
+resource "foxcon_subject_normalization" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  normalization_enabled = ` + normalization_enabled_true + `
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_subject_normalization.test", "subject_name", subject_name),
+					resource.TestCheckResourceAttr("foxcon_subject_normalization.test", "normalization_enabled", normalization_enabled_true),
+					resource.TestCheckResourceAttr("foxcon_subject_normalization.test", "rest_endpoint", rest_endpoint),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_subject_normalization.test", "last_updated"),
+				),
+			},
+		},
+	})
+}
+
+func TestSubjectNormalizationResourceWrongRestEndpoint(t *testing.T) {
+
+	subject_name = "local-wrong-config"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: schemaProviderConfig + `
+resource "foxcon_subject_normalization" "test" {
+  rest_endpoint = "http://127.127.127.127:1"
+  subject_name = "` + subject_name + `"
+  normalization_enabled = ` + normalization_enabled_true + `
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`connect: connection refused`),
+			},
+		},
+	})
+}
+
+func TestSubjectNormalizationResourceWrongCredentials(t *testing.T) {
+
+	subject_name = "local-wrong-creds"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: schemaProviderWrongConfig + `
+resource "foxcon_subject_normalization" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  normalization_enabled = ` + normalization_enabled_true + `
+  credentials {
+    key = "dummy_value"
+    secret = "dummy_value"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`Response code 401`),
+			},
+		},
+	})
+}
+
+func TestSubjectNormalizationProviderConfiguredWithEnvVars(t *testing.T) {
+
+	t.Setenv("SCHEMA_REGISTRY_REST_ENDPOINT", rest_endpoint)
+	t.Setenv("SCHEMA_REGISTRY_API_KEY", api_key)
+	t.Setenv("SCHEMA_REGISTRY_API_SECRET", api_secret)
+
+	subject_name = "env-var-provider"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Define resource
+			{
+				Config: emptyProviderConfig + `
+resource "foxcon_subject_normalization" "test" {
+  subject_name = "` + subject_name + `"
+  normalization_enabled = ` + normalization_enabled_true + `
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_subject_normalization.test", "subject_name", subject_name),
+					resource.TestCheckResourceAttr("foxcon_subject_normalization.test", "normalization_enabled", normalization_enabled_true),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_subject_normalization.test", "last_updated"),
+				),
+			},
+		},
+	})
+}
+
+func TestSubjectNormalizationProviderConfiguredWithEnvVarsNoEndpoint(t *testing.T) {
+
+	t.Setenv("SCHEMA_REGISTRY_API_KEY", api_key)
+	t.Setenv("SCHEMA_REGISTRY_API_SECRET", api_secret)
+
+	subject_name = "env-var-provider"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Define resource
+			{
+				Config: emptyProviderConfig + `
+resource "foxcon_subject_normalization" "test" {
+  subject_name = "` + subject_name + `"
+  normalization_enabled = ` + normalization_enabled_true + `
+}
+`,
+				ExpectError: regexp.MustCompile(`Could not create http client.`),
+			},
 		},
 	})
 }

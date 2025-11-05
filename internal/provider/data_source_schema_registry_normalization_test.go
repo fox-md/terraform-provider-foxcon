@@ -46,7 +46,7 @@ func TestSchemaRegistryNormalizationDataSourceReadTrueValue(t *testing.T) {
 						panic(fmt.Errorf("unexpected body: got '%s', want '%s'", strbody, "{\"normalize\":true}"))
 					}
 				},
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 data "foxcon_schema_registry_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   credentials {
@@ -93,7 +93,7 @@ func TestSchemaRegistryNormalizationDataSourceReadFalseValue(t *testing.T) {
 						panic(fmt.Errorf("unexpected body: got '%s', want '%s'", strbody, "{\"normalize\":false}"))
 					}
 				},
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 data "foxcon_schema_registry_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   credentials {
@@ -140,7 +140,7 @@ func TestSchemaRegistryNormalizationDataSourceReadNullValue(t *testing.T) {
 						panic(fmt.Errorf("unexpected body: got '%s', want '%s'", strbody, "{}"))
 					}
 				},
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 data "foxcon_schema_registry_normalization" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   credentials {

@@ -44,7 +44,7 @@ func (r *schemaRegistryNormalizationResource) Schema(_ context.Context, _ resour
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"rest_endpoint": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "Schema registry rest endpoint",
 			},
 			"normalization_enabled": schema.BoolAttribute{
@@ -72,11 +72,11 @@ func (r *schemaRegistryNormalizationResource) Schema(_ context.Context, _ resour
 			"credentials": schema.SingleNestedBlock{
 				Attributes: map[string]schema.Attribute{
 					"key": schema.StringAttribute{
-						Required:    true,
+						Optional:    true,
 						Description: "Schema registry user.",
 					},
 					"secret": schema.StringAttribute{
-						Required:    true,
+						Optional:    true,
 						Sensitive:   true,
 						Description: "Schema registry secret.",
 					},
@@ -94,6 +94,27 @@ type schemaRegistryNormalizationResourceModel struct {
 	LastUpdated  types.String      `tfsdk:"last_updated"`
 }
 
+func (r *schemaRegistryNormalizationResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config schemaRegistryNormalizationResourceModel
+
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	creds := schemaRegistryCredentials{
+		RestEndpoint: config.RestEndpoint,
+		Credentials:  config.Credentials,
+	}
+
+	creds.ValidateResourceConfig(resp)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
 // Create creates the resource and sets the initial Terraform state.
 // Create a new resource.
 func (r *schemaRegistryNormalizationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -105,7 +126,12 @@ func (r *schemaRegistryNormalizationResource) Create(ctx context.Context, req re
 		return
 	}
 
-	schemaAPIClient, err := NewClient(plan.RestEndpoint.ValueStringPointer(), plan.Credentials.Key.ValueStringPointer(), plan.Credentials.Secret.ValueStringPointer())
+	creds := schemaRegistryCredentials{
+		RestEndpoint: plan.RestEndpoint,
+		Credentials:  plan.Credentials,
+	}
+
+	schemaAPIClient, err := schemaRegistryClientFactory(r.client, &creds)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -145,13 +171,19 @@ func (r *schemaRegistryNormalizationResource) Create(ctx context.Context, req re
 func (r *schemaRegistryNormalizationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Get current state
 	var state schemaRegistryNormalizationResourceModel
+
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	schemaAPIClient, err := NewClient(state.RestEndpoint.ValueStringPointer(), state.Credentials.Key.ValueStringPointer(), state.Credentials.Secret.ValueStringPointer())
+	creds := schemaRegistryCredentials{
+		RestEndpoint: state.RestEndpoint,
+		Credentials:  state.Credentials,
+	}
+
+	schemaAPIClient, err := schemaRegistryClientFactory(r.client, &creds)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -192,7 +224,12 @@ func (r *schemaRegistryNormalizationResource) Update(ctx context.Context, req re
 		return
 	}
 
-	schemaAPIClient, err := NewClient(plan.RestEndpoint.ValueStringPointer(), plan.Credentials.Key.ValueStringPointer(), plan.Credentials.Secret.ValueStringPointer())
+	creds := schemaRegistryCredentials{
+		RestEndpoint: plan.RestEndpoint,
+		Credentials:  plan.Credentials,
+	}
+
+	schemaAPIClient, err := schemaRegistryClientFactory(r.client, &creds)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -235,7 +272,12 @@ func (r *schemaRegistryNormalizationResource) Delete(ctx context.Context, req re
 		return
 	}
 
-	schemaAPIClient, err := NewClient(state.RestEndpoint.ValueStringPointer(), state.Credentials.Key.ValueStringPointer(), state.Credentials.Secret.ValueStringPointer())
+	creds := schemaRegistryCredentials{
+		RestEndpoint: state.RestEndpoint,
+		Credentials:  state.Credentials,
+	}
+
+	schemaAPIClient, err := schemaRegistryClientFactory(r.client, &creds)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -270,7 +312,7 @@ func (r *schemaRegistryNormalizationResource) Configure(_ context.Context, req r
 		return
 	}
 
-	client, ok := req.ProviderData.(*Client)
+	clients, ok := req.ProviderData.(*providerClients)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -281,7 +323,7 @@ func (r *schemaRegistryNormalizationResource) Configure(_ context.Context, req r
 		return
 	}
 
-	r.client = client
+	r.client = clients.SchemaRegistryClient
 }
 
 func (r *schemaRegistryNormalizationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

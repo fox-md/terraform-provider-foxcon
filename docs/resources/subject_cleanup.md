@@ -40,13 +40,13 @@ resource "foxcon_subject_cleanup" "active" {
 ### Required
 
 - `cleanup_method` (String) Cleanup method type. Must be set to `KEEP_LATEST_ONLY` or `KEEP_ACTIVE_ONLY`.
-- `rest_endpoint` (String) Schema registry rest endpoint.
 - `subject_name` (String) Name of the subject.
 
 ### Optional
 
 - `cleanup_needed` (Boolean) Toggle to control whether clean-up in needed. No need to set it manually.
 - `credentials` (Block, Optional) (see [below for nested schema](#nestedblock--credentials))
+- `rest_endpoint` (String) Schema registry rest endpoint.
 
 ### Read-Only
 
@@ -57,7 +57,7 @@ resource "foxcon_subject_cleanup" "active" {
 <a id="nestedblock--credentials"></a>
 ### Nested Schema for `credentials`
 
-Required:
+Optional:
 
 - `key` (String)
 - `secret` (String, Sensitive)

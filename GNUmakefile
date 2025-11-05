@@ -24,7 +24,10 @@ fmt:
 # test:
 # 	go test -v -cover -timeout=120s -parallel=10 ./...
 
-test: down pretest
+test:
+	TF_ACC=1 go test ./... -count=1 -run='$(TEST)' -v
+
+tests: pretest
 	TF_ACC=1 go test ./... -count=1  -v -cover -timeout=120s -parallel=10
 
 testacc:
@@ -109,7 +112,6 @@ docs:
 	cd tools && go generate ./... && cd ..
 	cd docs && \
 	find . -type f -name "*.md" -exec sed -i 's/&#96;/`/g' {} + && \
-	sed -i '/^description: |-/,/^---/c\description: |-\n\n---' index.md && \
 	cd ..
 
 .PHONY: fmt lint test testacc install generate restart up down apply plan docs

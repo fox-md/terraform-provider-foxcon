@@ -22,7 +22,7 @@ func TestSubjectCleanupLatestHappyFlow(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -61,7 +61,7 @@ func TestSubjectCleanupActiveHappyFlow(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "active" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -99,7 +99,7 @@ func TestSubjectCleanupKeepLatestIfOneVersion(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -134,7 +134,7 @@ func TestSubjectCleanupKeepActiveIfOneVersion(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -160,6 +160,124 @@ resource "foxcon_subject_cleanup" "latest" {
 	})
 }
 
+func TestSubjectCleanupKeepActiveIfOneVersionWrongProvider(t *testing.T) {
+
+	subject_name = "one"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: schemaProviderWrongConfig + `
+resource "foxcon_subject_cleanup" "latest" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  cleanup_method = "KEEP_ACTIVE_ONLY"
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "rest_endpoint", rest_endpoint),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "subject_name", subject_name),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "cleanup_method", "KEEP_ACTIVE_ONLY"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "last_deleted.#", "0"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "latest_schema_version", "1"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "cleanup_needed", "false"),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.latest", "last_updated"),
+				),
+			},
+		},
+	})
+}
+
+func TestSubjectCleanupKeepActiveIfOneVersionUsingProvider(t *testing.T) {
+
+	subject_name = "one"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: schemaProviderConfig + `
+resource "foxcon_subject_cleanup" "latest" {
+  subject_name = "` + subject_name + `"
+  cleanup_method = "KEEP_ACTIVE_ONLY"
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "subject_name", subject_name),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "cleanup_method", "KEEP_ACTIVE_ONLY"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "last_deleted.#", "0"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "latest_schema_version", "1"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "cleanup_needed", "false"),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.latest", "last_updated"),
+				),
+			},
+		},
+	})
+}
+
+func TestSubjectCleanupKeepActiveIfOneVersionNoProviderNoConfig(t *testing.T) {
+
+	subject_name = "one"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: emptyProviderConfig + `
+resource "foxcon_subject_cleanup" "latest" {
+  subject_name = "` + subject_name + `"
+  cleanup_method = "KEEP_ACTIVE_ONLY"
+}
+`,
+				ExpectError: regexp.MustCompile(`Error creating http client`),
+			},
+		},
+	})
+}
+
+func TestSubjectCleanupKeepActiveIfOneVersionEnvVarsProviderConfig(t *testing.T) {
+
+	t.Setenv("SCHEMA_REGISTRY_REST_ENDPOINT", rest_endpoint)
+	t.Setenv("SCHEMA_REGISTRY_API_KEY", api_key)
+	t.Setenv("SCHEMA_REGISTRY_API_SECRET", api_secret)
+
+	subject_name = "one"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: emptyProviderConfig + `
+resource "foxcon_subject_cleanup" "latest" {
+  subject_name = "` + subject_name + `"
+  cleanup_method = "KEEP_ACTIVE_ONLY"
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "subject_name", subject_name),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "cleanup_method", "KEEP_ACTIVE_ONLY"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "last_deleted.#", "0"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "latest_schema_version", "1"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "cleanup_needed", "false"),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.latest", "last_updated"),
+				),
+			},
+		},
+	})
+}
+
 func TestSubjectCleanupAddSchemaVersionWhenActive(t *testing.T) {
 
 	subject_name = "one-to-two-active"
@@ -169,7 +287,7 @@ func TestSubjectCleanupAddSchemaVersionWhenActive(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -192,7 +310,7 @@ resource "foxcon_subject_cleanup" "latest" {
 				),
 			},
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -217,7 +335,7 @@ resource "foxcon_subject_cleanup" "latest" {
 					output, err = cmd.CombinedOutput()
 					if err != nil {
 						fmt.Printf("Command output:\n%s\n", string(output))
-						fmt.Printf("error: %s", err.Error())
+						fmt.Printf("error:%s", err.Error())
 						//panic("error:" + err.Error())
 					}
 				},
@@ -245,7 +363,7 @@ func TestSubjectCleanupAddSchemaVersionWhenLatest(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -268,17 +386,6 @@ resource "foxcon_subject_cleanup" "latest" {
 				),
 			},
 			{
-				Config: providerConfig + `
-resource "foxcon_subject_cleanup" "latest" {
-  rest_endpoint = "` + rest_endpoint + `"
-  subject_name = "` + subject_name + `"
-  cleanup_method = "KEEP_LATEST_ONLY"
-  credentials {
-    key = "` + api_key + `"
-    secret = "` + api_secret + `"
-  }
-}
-`,
 				PreConfig: func() {
 					// Get the root of the Git repo
 					gitRootCmd := exec.Command("git", "rev-parse", "--show-toplevel")
@@ -293,10 +400,21 @@ resource "foxcon_subject_cleanup" "latest" {
 					output, err = cmd.CombinedOutput()
 					if err != nil {
 						fmt.Printf("Command output:\n%s\n", string(output))
-						fmt.Printf("error: %s", err.Error())
+						fmt.Printf("error:%s", err.Error())
 						//panic("error:" + err.Error())
 					}
 				},
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_cleanup" "latest" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  cleanup_method = "KEEP_LATEST_ONLY"
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "rest_endpoint", rest_endpoint),
 					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "subject_name", subject_name),
@@ -322,7 +440,7 @@ func TestSubjectCleanupFromActiveToLatestHappyFlow(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -348,7 +466,7 @@ resource "foxcon_subject_cleanup" "test" {
 			},
 			// Update and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 			resource "foxcon_subject_cleanup" "test" {
 			  rest_endpoint = "` + rest_endpoint + `"
 			  subject_name = "` + subject_name + `"
@@ -386,7 +504,7 @@ func TestSubjectCleanupNoCleanupMethod(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -411,14 +529,89 @@ func TestSubjectCleanupNoCredentials(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
   cleanup_method = "KEEP_LATEST_ONLY"
 }
 `,
-				ExpectError: regexp.MustCompile(`Missing Configuration for Required Attribute`),
+				ExpectError: regexp.MustCompile(`Missing Required Attribute`),
+			},
+		},
+	})
+}
+
+func TestSubjectCleanupNoRestEndpoint(t *testing.T) {
+
+	subject_name = "dummy"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_cleanup" "test" {
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+  subject_name = "` + subject_name + `"
+  cleanup_method = "KEEP_LATEST_ONLY"
+}
+`,
+				ExpectError: regexp.MustCompile(`Missing Required Attribute`),
+			},
+		},
+	})
+}
+
+func TestSubjectCleanupNoSecret(t *testing.T) {
+
+	subject_name = "dummy"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_cleanup" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  credentials {
+    key = "` + api_key + `"
+  }
+  subject_name = "` + subject_name + `"
+  cleanup_method = "KEEP_LATEST_ONLY"
+}
+`,
+				ExpectError: regexp.MustCompile(`Missing Required Attribute`),
+			},
+		},
+	})
+}
+
+func TestSubjectCleanupNoKey(t *testing.T) {
+
+	subject_name = "dummy"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_cleanup" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  credentials {
+    secret = "` + api_secret + `"
+  }
+  subject_name = "` + subject_name + `"
+  cleanup_method = "KEEP_LATEST_ONLY"
+}
+`,
+				ExpectError: regexp.MustCompile(`Missing Required Attribute`),
 			},
 		},
 	})

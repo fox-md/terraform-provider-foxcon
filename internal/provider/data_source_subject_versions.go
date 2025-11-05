@@ -39,7 +39,7 @@ func (d *subjectVersionsDataSource) Schema(_ context.Context, _ datasource.Schem
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"rest_endpoint": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "Schema registry rest endpoint",
 			},
 			"subject_name": schema.StringAttribute{
@@ -48,7 +48,7 @@ func (d *subjectVersionsDataSource) Schema(_ context.Context, _ datasource.Schem
 			},
 			"latest": schema.Int32Attribute{
 				Computed:    true,
-				Description: "Lastest schema version number.",
+				Description: "Latest schema version number.",
 			},
 			"active": schema.ListAttribute{
 				ElementType: types.Int32Type,
@@ -70,16 +70,37 @@ func (d *subjectVersionsDataSource) Schema(_ context.Context, _ datasource.Schem
 			"credentials": schema.SingleNestedBlock{
 				Attributes: map[string]schema.Attribute{
 					"key": schema.StringAttribute{
-						Required: true,
+						Optional: true,
 					},
 					"secret": schema.StringAttribute{
-						Required:  true,
+						Optional:  true,
 						Sensitive: true,
 					},
 				},
 			},
 		},
-		MarkdownDescription: "Reads subject versions",
+		MarkdownDescription: "Reads subject schema versions",
+	}
+}
+
+func (d *subjectVersionsDataSource) ValidateConfig(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var config subjectVersionsDataSourceModel
+
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	creds := schemaRegistryCredentials{
+		RestEndpoint: config.RestEndpoint,
+		Credentials:  config.Credentials,
+	}
+
+	creds.ValidateDataSourceConfig(resp)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
 }
 
@@ -95,7 +116,12 @@ func (d *subjectVersionsDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	schemaAPIClient, err := NewClient(config.RestEndpoint.ValueStringPointer(), config.Credentials.Key.ValueStringPointer(), config.Credentials.Secret.ValueStringPointer())
+	creds := schemaRegistryCredentials{
+		RestEndpoint: config.RestEndpoint,
+		Credentials:  config.Credentials,
+	}
+
+	schemaAPIClient, err := schemaRegistryClientFactory(d.client, &creds)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -157,7 +183,8 @@ func (d *subjectVersionsDataSource) Configure(_ context.Context, req datasource.
 		return
 	}
 
-	client, ok := req.ProviderData.(*Client)
+	clients, ok := req.ProviderData.(*providerClients)
+
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
@@ -167,7 +194,7 @@ func (d *subjectVersionsDataSource) Configure(_ context.Context, req datasource.
 		return
 	}
 
-	d.client = client
+	d.client = clients.SchemaRegistryClient
 }
 
 type subjectVersionsDataSourceModel struct {

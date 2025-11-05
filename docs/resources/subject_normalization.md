@@ -29,13 +29,13 @@ resource "foxcon_subject_normalization" "test" {
 
 ### Required
 
-- `rest_endpoint` (String) Schema registry rest endpoint
 - `subject_name` (String) Name of the subject
 
 ### Optional
 
 - `credentials` (Block, Optional) (see [below for nested schema](#nestedblock--credentials))
 - `normalization_enabled` (Boolean) Normalization toggle
+- `rest_endpoint` (String) Schema registry rest endpoint
 
 ### Read-Only
 
@@ -44,7 +44,7 @@ resource "foxcon_subject_normalization" "test" {
 <a id="nestedblock--credentials"></a>
 ### Nested Schema for `credentials`
 
-Required:
+Optional:
 
 - `key` (String)
 - `secret` (String, Sensitive)
