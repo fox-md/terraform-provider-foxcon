@@ -9,13 +9,6 @@ import (
 )
 
 const (
-	// 	providerConfig = `
-	// provider "foxcon" {
-	//   cloud_api_key = "test"
-	//   cloud_api_secret = "test"
-	// }
-	// `
-
 	cloudProviderConfig = `
 provider "foxcon" {
   cloud_api_key = "test"

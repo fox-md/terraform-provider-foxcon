@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
-	//"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -25,7 +24,6 @@ var (
 	_ resource.Resource                = &subjectCleanupResource{}
 	_ resource.ResourceWithConfigure   = &subjectCleanupResource{}
 	_ resource.ResourceWithImportState = &subjectCleanupResource{}
-	//_ resource.ResourceWithConfigValidators = &subjectCleanupResource{}
 )
 
 // NewSubjectCleanupResource is a helper function to simplify the provider implementation.
