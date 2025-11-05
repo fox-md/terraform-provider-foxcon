@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 
+	//"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -46,7 +47,7 @@ func (r *subjectNormalizationResource) Schema(_ context.Context, _ resource.Sche
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"rest_endpoint": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "Schema registry rest endpoint",
 			},
 			"subject_name": schema.StringAttribute{
@@ -79,10 +80,10 @@ func (r *subjectNormalizationResource) Schema(_ context.Context, _ resource.Sche
 			"credentials": schema.SingleNestedBlock{
 				Attributes: map[string]schema.Attribute{
 					"key": schema.StringAttribute{
-						Required: true,
+						Optional: true,
 					},
 					"secret": schema.StringAttribute{
-						Required:  true,
+						Optional:  true,
 						Sensitive: true,
 					},
 				},
@@ -100,6 +101,27 @@ type subjectNormalizationResourceModel struct {
 	LastUpdated  types.String      `tfsdk:"last_updated"`
 }
 
+func (r *subjectNormalizationResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config subjectNormalizationResourceModel
+
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	creds := schemaRegistryCredentials{
+		RestEndpoint: config.RestEndpoint,
+		Credentials:  config.Credentials,
+	}
+
+	creds.ValidateResourceConfig(resp)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
 // Create creates the resource and sets the initial Terraform state.
 // Create a new resource.
 func (r *subjectNormalizationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -111,7 +133,12 @@ func (r *subjectNormalizationResource) Create(ctx context.Context, req resource.
 		return
 	}
 
-	schemaAPIClient, err := NewClient(plan.RestEndpoint.ValueStringPointer(), plan.Credentials.Key.ValueStringPointer(), plan.Credentials.Secret.ValueStringPointer())
+	creds := schemaRegistryCredentials{
+		RestEndpoint: plan.RestEndpoint,
+		Credentials:  plan.Credentials,
+	}
+
+	schemaAPIClient, err := schemaRegistryClientFactory(r.client, &creds)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -165,7 +192,12 @@ func (r *subjectNormalizationResource) Read(ctx context.Context, req resource.Re
 		return
 	}
 
-	schemaAPIClient, err := NewClient(state.RestEndpoint.ValueStringPointer(), state.Credentials.Key.ValueStringPointer(), state.Credentials.Secret.ValueStringPointer())
+	creds := schemaRegistryCredentials{
+		RestEndpoint: state.RestEndpoint,
+		Credentials:  state.Credentials,
+	}
+
+	schemaAPIClient, err := schemaRegistryClientFactory(r.client, &creds)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -214,7 +246,12 @@ func (r *subjectNormalizationResource) Update(ctx context.Context, req resource.
 		return
 	}
 
-	schemaAPIClient, err := NewClient(plan.RestEndpoint.ValueStringPointer(), plan.Credentials.Key.ValueStringPointer(), plan.Credentials.Secret.ValueStringPointer())
+	creds := schemaRegistryCredentials{
+		RestEndpoint: plan.RestEndpoint,
+		Credentials:  plan.Credentials,
+	}
+
+	schemaAPIClient, err := schemaRegistryClientFactory(r.client, &creds)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -244,7 +281,7 @@ func (r *subjectNormalizationResource) Update(ctx context.Context, req resource.
 	}
 
 	if subjectConfig != nil {
-		attrs = parseResponseAttrs(subjectConfig)
+		_, attrs = parseResponseAttrs(subjectConfig)
 	}
 
 	if plan.Normalize.IsNull() {
@@ -304,7 +341,12 @@ func (r *subjectNormalizationResource) Delete(ctx context.Context, req resource.
 		return
 	}
 
-	schemaAPIClient, err := NewClient(state.RestEndpoint.ValueStringPointer(), state.Credentials.Key.ValueStringPointer(), state.Credentials.Secret.ValueStringPointer())
+	creds := schemaRegistryCredentials{
+		RestEndpoint: state.RestEndpoint,
+		Credentials:  state.Credentials,
+	}
+
+	schemaAPIClient, err := schemaRegistryClientFactory(r.client, &creds)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -336,7 +378,7 @@ func (r *subjectNormalizationResource) Delete(ctx context.Context, req resource.
 	if subjectConfig == nil {
 		return
 	} else {
-		attrs = parseResponseAttrs(subjectConfig)
+		_, attrs = parseResponseAttrs(subjectConfig)
 	}
 
 	if *subjectConfig.CompatibilityLevel == *schemaRegistryConfig.CompatibilityLevel &&
@@ -380,7 +422,7 @@ func (r *subjectNormalizationResource) Configure(_ context.Context, req resource
 		return
 	}
 
-	client, ok := req.ProviderData.(*Client)
+	clients, ok := req.ProviderData.(*providerClients)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -391,7 +433,7 @@ func (r *subjectNormalizationResource) Configure(_ context.Context, req resource
 		return
 	}
 
-	r.client = client
+	r.client = clients.SchemaRegistryClient
 }
 
 func (r *subjectNormalizationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -446,34 +488,43 @@ func (r *subjectNormalizationResource) ImportState(ctx context.Context, req reso
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("credentials"), credentials)...)
 }
 
-func parseResponseAttrs(resp *SchemaConfigResponse) []string {
+func parseResponseAttrs(resp *SchemaConfigResponse) (int, []string) {
+	count := 0
 	var attrs []string
 	if resp.Alias != nil {
+		count++
 		attrs = append(attrs, "alias")
 	}
 	if resp.Normalize != nil {
+		count++
 		attrs = append(attrs, "normalize")
 	}
 	if resp.CompatibilityLevel != nil {
+		count++
 		attrs = append(attrs, "compatibilityLevel")
 	}
 	if resp.CompatibilityGroup != nil {
+		count++
 		attrs = append(attrs, "compatibilityGroup")
 	}
 	if resp.DefaultMetadata != nil {
+		count++
 		attrs = append(attrs, "defaultMetadata")
 	}
 	if resp.OverrideMetadata != nil {
+		count++
 		attrs = append(attrs, "overrideMetadata")
 	}
 	if resp.DefaultRuleSet != nil {
+		count++
 		attrs = append(attrs, "defaultRuleSet")
 	}
 	if resp.OverrideRuleSet != nil {
+		count++
 		attrs = append(attrs, "overrideRuleSet")
 	}
 	sort.Strings(attrs)
-	return attrs
+	return count, attrs
 }
 
 // func parseResponseAttrs(config *SchemaConfigResponse) (int, []string) {

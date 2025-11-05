@@ -236,7 +236,9 @@ func (r *invitationResource) Configure(_ context.Context, req resource.Configure
 		return
 	}
 
-	client, ok := req.ProviderData.(*Client)
+	clients, ok := req.ProviderData.(*providerClients)
+
+	//client, ok := req.ProviderData.(*Client)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -247,7 +249,13 @@ func (r *invitationResource) Configure(_ context.Context, req resource.Configure
 		return
 	}
 
-	r.client = client
+	ValidateCloudApiClient(clients.CloudApiClient, resp)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	r.client = clients.CloudApiClient
 }
 
 func (r *invitationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

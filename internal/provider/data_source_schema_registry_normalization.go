@@ -38,7 +38,7 @@ func (d *schemaRegistryNormalizationDataSource) Schema(_ context.Context, _ data
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"rest_endpoint": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "Schema registry rest endpoint",
 			},
 			"normalization_enabled": schema.BoolAttribute{
@@ -50,16 +50,37 @@ func (d *schemaRegistryNormalizationDataSource) Schema(_ context.Context, _ data
 			"credentials": schema.SingleNestedBlock{
 				Attributes: map[string]schema.Attribute{
 					"key": schema.StringAttribute{
-						Required: true,
+						Optional: true,
 					},
 					"secret": schema.StringAttribute{
-						Required:  true,
+						Optional:  true,
 						Sensitive: true,
 					},
 				},
 			},
 		},
 		MarkdownDescription: "Read schema registry normalization value",
+	}
+}
+
+func (d *schemaRegistryNormalizationDataSource) ValidateConfig(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var config schemaRegistryNormalizationDataSourceModel
+
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	creds := schemaRegistryCredentials{
+		RestEndpoint: config.RestEndpoint,
+		Credentials:  config.Credentials,
+	}
+
+	creds.ValidateDataSourceConfig(resp)
+
+	if resp.Diagnostics.HasError() {
+		return
 	}
 }
 
@@ -74,7 +95,12 @@ func (d *schemaRegistryNormalizationDataSource) Read(ctx context.Context, req da
 		return
 	}
 
-	schemaAPIClient, err := NewClient(config.RestEndpoint.ValueStringPointer(), config.Credentials.Key.ValueStringPointer(), config.Credentials.Secret.ValueStringPointer())
+	creds := schemaRegistryCredentials{
+		RestEndpoint: config.RestEndpoint,
+		Credentials:  config.Credentials,
+	}
+
+	schemaAPIClient, err := schemaRegistryClientFactory(d.client, &creds)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -111,7 +137,8 @@ func (d *schemaRegistryNormalizationDataSource) Configure(_ context.Context, req
 		return
 	}
 
-	client, ok := req.ProviderData.(*Client)
+	clients, ok := req.ProviderData.(*providerClients)
+
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
@@ -121,7 +148,7 @@ func (d *schemaRegistryNormalizationDataSource) Configure(_ context.Context, req
 		return
 	}
 
-	d.client = client
+	d.client = clients.SchemaRegistryClient
 }
 
 type schemaRegistryNormalizationDataSourceModel struct {

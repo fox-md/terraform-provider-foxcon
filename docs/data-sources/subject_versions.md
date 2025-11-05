@@ -3,12 +3,12 @@
 page_title: "foxcon_subject_versions Data Source - foxcon"
 subcategory: ""
 description: |-
-  Reads subject versions
+  Reads subject schema versions
 ---
 
 # foxcon_subject_versions (Data Source)
 
-Reads subject versions
+Reads subject schema versions
 
 
 
@@ -17,24 +17,24 @@ Reads subject versions
 
 ### Required
 
-- `rest_endpoint` (String) Schema registry rest endpoint
 - `subject_name` (String) Name of the subject
 
 ### Optional
 
 - `credentials` (Block, Optional) (see [below for nested schema](#nestedblock--credentials))
+- `rest_endpoint` (String) Schema registry rest endpoint
 
 ### Read-Only
 
 - `active` (List of Number) List of all active versions.
 - `all` (List of Number) List of all schema versions (active and soft-deleted).
-- `latest` (Number) Lastest schema version number.
+- `latest` (Number) Latest schema version number.
 - `soft_deleted` (List of Number) List of all soft-deleted versions.
 
 <a id="nestedblock--credentials"></a>
 ### Nested Schema for `credentials`
 
-Required:
+Optional:
 
 - `key` (String)
 - `secret` (String, Sensitive)

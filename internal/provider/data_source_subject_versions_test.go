@@ -19,7 +19,7 @@ func TestSubjectVersionsDataSourceRead(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 data "foxcon_subject_versions" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"
@@ -60,7 +60,7 @@ func TestSubjectVersionsDataSourceReadAfterV1Delete(t *testing.T) {
 						panic(fmt.Sprintf("unexpected status code: got %d, want %d", resp.StatusCode, http.StatusOK))
 					}
 				},
-				Config: providerConfig + `
+				Config: cloudProviderConfig + `
 data "foxcon_subject_versions" "test" {
   rest_endpoint = "` + rest_endpoint + `"
   subject_name = "` + subject_name + `"

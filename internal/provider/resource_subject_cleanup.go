@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 
+	//"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -24,6 +25,7 @@ var (
 	_ resource.Resource                = &subjectCleanupResource{}
 	_ resource.ResourceWithConfigure   = &subjectCleanupResource{}
 	_ resource.ResourceWithImportState = &subjectCleanupResource{}
+	//_ resource.ResourceWithConfigValidators = &subjectCleanupResource{}
 )
 
 // NewSubjectCleanupResource is a helper function to simplify the provider implementation.
@@ -46,7 +48,7 @@ func (r *subjectCleanupResource) Schema(_ context.Context, _ resource.SchemaRequ
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"rest_endpoint": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "Schema registry rest endpoint.",
 			},
 			"subject_name": schema.StringAttribute{
@@ -84,10 +86,10 @@ func (r *subjectCleanupResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"credentials": schema.SingleNestedBlock{
 				Attributes: map[string]schema.Attribute{
 					"key": schema.StringAttribute{
-						Required: true,
+						Optional: true,
 					},
 					"secret": schema.StringAttribute{
-						Required:  true,
+						Optional:  true,
 						Sensitive: true,
 					},
 				},
@@ -108,6 +110,27 @@ type subjectCleanupResourceModel struct {
 	LastUpdated       types.String      `tfsdk:"last_updated"`
 }
 
+func (r *subjectCleanupResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config subjectCleanupResourceModel
+
+	diags := req.Config.Get(ctx, &config)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	creds := schemaRegistryCredentials{
+		RestEndpoint: config.RestEndpoint,
+		Credentials:  config.Credentials,
+	}
+
+	creds.ValidateResourceConfig(resp)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
 // Create creates the resource and sets the initial Terraform state.
 // Create a new resource.
 func (r *subjectCleanupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -123,7 +146,12 @@ func (r *subjectCleanupResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	schemaAPIClient, err := NewClient(plan.RestEndpoint.ValueStringPointer(), plan.Credentials.Key.ValueStringPointer(), plan.Credentials.Secret.ValueStringPointer())
+	creds := schemaRegistryCredentials{
+		RestEndpoint: plan.RestEndpoint,
+		Credentials:  plan.Credentials,
+	}
+
+	schemaAPIClient, err := schemaRegistryClientFactory(r.client, &creds)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -204,7 +232,12 @@ func (r *subjectCleanupResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	schemaAPIClient, err := NewClient(state.RestEndpoint.ValueStringPointer(), state.Credentials.Key.ValueStringPointer(), state.Credentials.Secret.ValueStringPointer())
+	creds := schemaRegistryCredentials{
+		RestEndpoint: state.RestEndpoint,
+		Credentials:  state.Credentials,
+	}
+
+	schemaAPIClient, err := schemaRegistryClientFactory(r.client, &creds)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -259,7 +292,12 @@ func (r *subjectCleanupResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	schemaAPIClient, err := NewClient(plan.RestEndpoint.ValueStringPointer(), plan.Credentials.Key.ValueStringPointer(), plan.Credentials.Secret.ValueStringPointer())
+	creds := schemaRegistryCredentials{
+		RestEndpoint: plan.RestEndpoint,
+		Credentials:  plan.Credentials,
+	}
+
+	schemaAPIClient, err := schemaRegistryClientFactory(r.client, &creds)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -348,7 +386,7 @@ func (r *subjectCleanupResource) Configure(_ context.Context, req resource.Confi
 		return
 	}
 
-	client, ok := req.ProviderData.(*Client)
+	clients, ok := req.ProviderData.(*providerClients)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -359,7 +397,7 @@ func (r *subjectCleanupResource) Configure(_ context.Context, req resource.Confi
 		return
 	}
 
-	r.client = client
+	r.client = clients.SchemaRegistryClient
 }
 
 func (r *subjectCleanupResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

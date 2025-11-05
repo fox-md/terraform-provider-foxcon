@@ -84,7 +84,7 @@ func (c *Client) GetUserInvitationByParameter(search_type, search_parameter stri
 	invitationList := InvitationList{}
 	invitation := Invitation{}
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/iam/v2/invitations?%s=%s&status=INVITE_STATUS_ACCEPTED", c.HostURL, search_type, search_parameter), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/iam/v2/invitations?%s=%s", c.HostURL, search_type, search_parameter), nil)
 
 	if err != nil {
 		return nil, err

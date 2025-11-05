@@ -55,9 +55,9 @@ func (p *foxconProvider) Schema(_ context.Context, _ provider.SchemaRequest, res
 - Normalization configuration for subject.
 - Normalization configuration for schema registry.
 - Confluent invitation resource that acts as original, however also deletes user from Confluent on resource deletion.
-- &#96;foxcon_confluent_read_user&#96; that reads user details from Confluent on resources creation and deletes user from Confluent on resource deletion.
 - Cleanup of schema versions. Can be performed for soft-deleted or all non-latest versions.
-			`,
+			` +
+			"- `foxcon_confluent_read_user` that reads user details from Confluent on resources creation and deletes user from Confluent on resource deletion.",
 		Attributes: map[string]schema.Attribute{
 			"api_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -72,12 +72,32 @@ func (p *foxconProvider) Schema(_ context.Context, _ provider.SchemaRequest, res
 				Sensitive:   true,
 				Description: "Confluent Cloud API Secret. Can be configured using `CONFLUENT_CLOUD_API_SECRET` environment variable.",
 			},
+			"schema_registry_rest_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: "Confluent Cloud API Key. Can be configured using `SCHEMA_REGISTRY_REST_ENDPOINT` environment variable.",
+				// Validators: []validator.String{
+				// 	EndpointValidator{},
+				// },
+			},
+			"schema_registry_api_key": schema.StringAttribute{
+				Optional:    true,
+				Description: "Confluent Cloud API Key. Can be configured using `SCHEMA_REGISTRY_API_KEY` environment variable.",
+			},
+			"schema_registry_api_secret": schema.StringAttribute{
+				Optional:    true,
+				Sensitive:   true,
+				Description: "Confluent Cloud API Key. Can be configured using `SCHEMA_REGISTRY_API_SECRET` environment variable.",
+			},
 		},
 	}
 }
 
 // Configure prepares a Confluent API client for data sources and resources.
 func (p *foxconProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+
+	var SchemaRegistryClient *Client
+	var CloudApiClient *Client
+	var err error
 
 	tflog.Info(ctx, "Configuring foxcon client")
 
@@ -139,57 +159,104 @@ func (p *foxconProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		api_endpoint = ConfluentCloudApiEndpoint
 	}
 
+	schema_registry_api_key := os.Getenv("SCHEMA_REGISTRY_API_KEY")
+	schema_registry_api_secret := os.Getenv("SCHEMA_REGISTRY_API_SECRET")
+	schema_registry_rest_endpoint := os.Getenv("SCHEMA_REGISTRY_REST_ENDPOINT")
+
+	if !config.SchemaRegistryUsername.IsNull() {
+		schema_registry_api_key = config.SchemaRegistryUsername.ValueString()
+	}
+
+	if !config.SchemaRegistryPassword.IsNull() {
+		schema_registry_api_secret = config.SchemaRegistryPassword.ValueString()
+	}
+
+	if !config.SchemaRegistryEndpoint.IsNull() {
+		schema_registry_rest_endpoint = config.SchemaRegistryEndpoint.ValueString()
+	}
+
 	// If any of the expected configurations are missing, return
 	// errors with provider-specific guidance.
 
-	if cloud_api_key == "" {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("cloud_api_key"),
-			"Missing Confluent API Key",
-			"The provider cannot create the Confluent API client as there is a missing or empty value for the Confluent API username. "+
-				"Set the username value in the configuration or use the CONFLUENT_CLOUD_API_KEY environment variable. "+
-				"If either is already set, ensure the value is not empty.",
-		)
-	}
+	// if cloud_api_key == "" {
+	// 	resp.Diagnostics.AddAttributeError(
+	// 		path.Root("cloud_api_key"),
+	// 		"Missing Confluent API Key",
+	// 		"The provider cannot create the Confluent API client as there is a missing or empty value for the Confluent API username. "+
+	// 			"Set the username value in the configuration or use the CONFLUENT_CLOUD_API_KEY environment variable. "+
+	// 			"If either is already set, ensure the value is not empty.",
+	// 	)
+	// }
 
-	if cloud_api_secret == "" {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("cloud_api_secret"),
-			"Missing Confluent API Secret",
-			"The provider cannot create the Confluent API client as there is a missing or empty value for the Confluent API password. "+
-				"Set the password value in the configuration or use the CONFLUENT_CLOUD_API_SECRET environment variable. "+
-				"If either is already set, ensure the value is not empty.",
-		)
-	}
+	// if cloud_api_secret == "" {
+	// 	resp.Diagnostics.AddAttributeError(
+	// 		path.Root("cloud_api_secret"),
+	// 		"Missing Confluent API Secret",
+	// 		"The provider cannot create the Confluent API client as there is a missing or empty value for the Confluent API password. "+
+	// 			"Set the password value in the configuration or use the CONFLUENT_CLOUD_API_SECRET environment variable. "+
+	// 			"If either is already set, ensure the value is not empty.",
+	// 	)
+	// }
 
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	// if resp.Diagnostics.HasError() {
+	// 	return
+	// }
 
 	ctx = tflog.SetField(ctx, "api_endpoint", api_endpoint)
 	ctx = tflog.SetField(ctx, "cloud_api_key", cloud_api_key)
 	ctx = tflog.SetField(ctx, "cloud_api_secret", cloud_api_secret)
 
+	ctx = tflog.SetField(ctx, "schema_registry_rest_endpoint", schema_registry_rest_endpoint)
+	ctx = tflog.SetField(ctx, "schema_registry_api_key", schema_registry_api_key)
+	ctx = tflog.SetField(ctx, "schema_registry_api_secret", schema_registry_api_secret)
+
 	ctx = tflog.MaskFieldValuesWithFieldKeys(ctx, "cloud_api_secret")
+	ctx = tflog.MaskFieldValuesWithFieldKeys(ctx, "schema_registry_api_secret")
 
 	tflog.Debug(ctx, "Creating foxcon client")
 
-	// Create a new HashiCups client using the configuration values
-	client, err := NewClient(&api_endpoint, &cloud_api_key, &cloud_api_secret)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Create Confluent API Client",
-			"An unexpected error occurred when creating the Confluent API client. "+
-				"If the error is not clear, please contact the provider developers.\n\n"+
-				"Confluent Client Error: "+err.Error(),
-		)
-		return
+	if api_endpoint == "" || cloud_api_key == "" || cloud_api_secret == "" {
+		CloudApiClient = nil
+	} else {
+		CloudApiClient, err = NewClient(&api_endpoint, &cloud_api_key, &cloud_api_secret)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Unable to Create Confluent API Client",
+				"An unexpected error occurred when creating the Confluent API client. "+
+					"If the error is not clear, please contact the provider developers.\n\n"+
+					"Confluent Client Error: "+err.Error(),
+			)
+			return
+		}
 	}
 
-	// Make the HashiCups client available during DataSource and Resource
+	if schema_registry_rest_endpoint == "" || schema_registry_api_key == "" || schema_registry_api_secret == "" {
+		SchemaRegistryClient = nil
+	} else {
+		SchemaRegistryClient, err = NewClient(&schema_registry_rest_endpoint, &schema_registry_api_key, &schema_registry_api_secret)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Unable to Create Schema API Client",
+				"An unexpected error occurred when creating the Schema API client. "+
+					"If the error is not clear, please contact the provider developers.\n\n"+
+					"Schema Client Error: "+err.Error(),
+			)
+			return
+		}
+	}
+
+	// Make the client available during DataSource and Resource
 	// type Configure methods.
-	resp.DataSourceData = client
-	resp.ResourceData = client
+	resp.DataSourceData =
+		&providerClients{
+			CloudApiClient:       CloudApiClient,
+			SchemaRegistryClient: SchemaRegistryClient,
+		}
+
+	resp.ResourceData = &providerClients{
+		CloudApiClient:       CloudApiClient,
+		SchemaRegistryClient: SchemaRegistryClient,
+	}
 
 	tflog.Info(ctx, "Configured foxcon client", map[string]any{"success": true})
 }
@@ -213,8 +280,19 @@ func (p *foxconProvider) Resources(_ context.Context) []func() resource.Resource
 	}
 }
 
+func (p *foxconProvider) ConfigValidator(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+}
+
 type foxconProviderModel struct {
-	ApiEndpoint    types.String `tfsdk:"api_endpoint"`
-	CloudApiKey    types.String `tfsdk:"cloud_api_key"`
-	CloudApiSecret types.String `tfsdk:"cloud_api_secret"`
+	ApiEndpoint            types.String `tfsdk:"api_endpoint"`
+	CloudApiKey            types.String `tfsdk:"cloud_api_key"`
+	CloudApiSecret         types.String `tfsdk:"cloud_api_secret"`
+	SchemaRegistryEndpoint types.String `tfsdk:"schema_registry_rest_endpoint"`
+	SchemaRegistryUsername types.String `tfsdk:"schema_registry_api_key"`
+	SchemaRegistryPassword types.String `tfsdk:"schema_registry_api_secret"`
+}
+
+type providerClients struct {
+	CloudApiClient       *Client
+	SchemaRegistryClient *Client
 }

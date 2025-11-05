@@ -295,7 +295,7 @@ func (r *userResource) Configure(_ context.Context, req resource.ConfigureReques
 		return
 	}
 
-	client, ok := req.ProviderData.(*Client)
+	clients, ok := req.ProviderData.(*providerClients)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -306,7 +306,13 @@ func (r *userResource) Configure(_ context.Context, req resource.ConfigureReques
 		return
 	}
 
-	r.client = client
+	ValidateCloudApiClient(clients.CloudApiClient, resp)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	r.client = clients.CloudApiClient
 }
 
 func (r *userResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
