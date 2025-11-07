@@ -81,3 +81,47 @@ data "foxcon_subject_versions" "test" {
 		},
 	})
 }
+
+func TestSubjectVersionsDataSourceReadProviderMigration111To121Setup(t *testing.T) {
+
+	subject_name = "data-source-migration"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cloudProviderConfig + `
+data "foxcon_subject_versions" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.foxcon_subject_versions.test", "rest_endpoint", rest_endpoint),
+					resource.TestCheckResourceAttr("data.foxcon_subject_versions.test", "latest", "5"),
+					resource.TestCheckResourceAttr("data.foxcon_subject_versions.test", "soft_deleted.#", "2"),
+					resource.TestCheckResourceAttr("data.foxcon_subject_versions.test", "active.#", "3"),
+					resource.TestCheckResourceAttr("data.foxcon_subject_versions.test", "all.#", "5"),
+				),
+			},
+			{
+				Config: schemaProviderConfig + `
+data "foxcon_subject_versions" "test" {
+  subject_name = "` + subject_name + `"
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckNoResourceAttr("data.foxcon_subject_versions.test", "rest_endpoint"),
+					resource.TestCheckResourceAttr("data.foxcon_subject_versions.test", "latest", "5"),
+					resource.TestCheckResourceAttr("data.foxcon_subject_versions.test", "soft_deleted.#", "2"),
+					resource.TestCheckResourceAttr("data.foxcon_subject_versions.test", "active.#", "3"),
+					resource.TestCheckResourceAttr("data.foxcon_subject_versions.test", "all.#", "5"),
+				),
+			},
+		},
+	})
+}
