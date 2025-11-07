@@ -849,3 +849,50 @@ resource "foxcon_subject_normalization" "test" {
 		},
 	})
 }
+
+func TestSubjectNormalizationProviderMigration111To121Setup(t *testing.T) {
+
+	subject_name = "test-prov-migration"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_normalization" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  normalization_enabled = ` + normalization_enabled_true + `
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_subject_normalization.test", "subject_name", subject_name),
+					resource.TestCheckResourceAttr("foxcon_subject_normalization.test", "normalization_enabled", normalization_enabled_true),
+					resource.TestCheckResourceAttr("foxcon_subject_normalization.test", "rest_endpoint", rest_endpoint),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_subject_normalization.test", "last_updated"),
+				),
+			},
+			{
+				Config: schemaProviderConfig + `
+resource "foxcon_subject_normalization" "test" {
+  subject_name = "` + subject_name + `"
+  normalization_enabled = ` + normalization_enabled_true + `
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_subject_normalization.test", "subject_name", subject_name),
+					resource.TestCheckResourceAttr("foxcon_subject_normalization.test", "normalization_enabled", normalization_enabled_true),
+					resource.TestCheckNoResourceAttr("foxcon_subject_normalization.test", "rest_endpoint"),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_subject_normalization.test", "last_updated"),
+				),
+			},
+		},
+	})
+}

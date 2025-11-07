@@ -616,3 +616,57 @@ resource "foxcon_subject_cleanup" "test" {
 		},
 	})
 }
+
+func TestSubjectCleanupKeepActiveProviderMigration111To121Setup(t *testing.T) {
+
+	subject_name = "one"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_cleanup" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  cleanup_method = "KEEP_ACTIVE_ONLY"
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "subject_name", subject_name),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "cleanup_method", "KEEP_ACTIVE_ONLY"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "last_deleted.#", "0"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "latest_schema_version", "1"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "cleanup_needed", "false"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "rest_endpoint", rest_endpoint),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.test", "last_updated"),
+				),
+			},
+			{
+				Config: schemaProviderConfig + `
+resource "foxcon_subject_cleanup" "test" {
+  subject_name = "` + subject_name + `"
+  cleanup_method = "KEEP_ACTIVE_ONLY"
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "subject_name", subject_name),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "cleanup_method", "KEEP_ACTIVE_ONLY"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "last_deleted.#", "0"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "latest_schema_version", "1"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "cleanup_needed", "false"),
+					resource.TestCheckNoResourceAttr("foxcon_subject_cleanup.test", "rest_endpoint"),
+					resource.TestCheckNoResourceAttr("foxcon_subject_cleanup.test", "credentials"),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.test", "last_updated"),
+				),
+			},
+		},
+	})
+}

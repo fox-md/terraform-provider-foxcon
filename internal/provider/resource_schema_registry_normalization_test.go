@@ -349,3 +349,44 @@ resource "foxcon_schema_registry_normalization" "test" {
 		},
 	})
 }
+
+func TestSchemaRegistryNormalizationProviderMigration111To121Setup(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: cloudProviderConfig + `
+resource "foxcon_schema_registry_normalization" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  normalization_enabled = ` + normalization_enabled_true + `
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_schema_registry_normalization.test", "normalization_enabled", normalization_enabled_true),
+					resource.TestCheckResourceAttr("foxcon_schema_registry_normalization.test", "rest_endpoint", rest_endpoint),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_schema_registry_normalization.test", "last_updated"),
+				),
+			},
+			{
+				Config: schemaProviderConfig + `
+resource "foxcon_schema_registry_normalization" "test" {
+  normalization_enabled = ` + normalization_enabled_true + `
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_schema_registry_normalization.test", "normalization_enabled", normalization_enabled_true),
+					resource.TestCheckNoResourceAttr("foxcon_schema_registry_normalization.test", "rest_endpoint"),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_schema_registry_normalization.test", "last_updated"),
+				),
+			},
+		},
+	})
+}

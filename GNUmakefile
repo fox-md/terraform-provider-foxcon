@@ -33,9 +33,9 @@ tests: pretest
 testacc:
 	TF_ACC=1 go test -v -cover -timeout 120m ./...
 
-pretest: checkup populate
+pretest: restart populate
 
-checkup: up
+restart: down up
 	@for i in {1..10}; do code=$$(curl -LI -u "admin:admin-secret" http://localhost:8081 -o /dev/null -w '%{http_code}' -s);if [ "$$code" -eq 200 ]; then echo "Schema is UP" && exit 0; else sleep 5; fi; done; echo "Schema is DOWN" && exit 1
 
 up:
@@ -60,6 +60,8 @@ populate:
 	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/one-to-two-active ; \
 	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/one-to-two-latest ; \
 	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/data-source ; \
+	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/data-source-migration ; \
+
 
 
 	schema=$$(cat tests/schemas/v1.json | tr -d '\n\r' | sed 's/"/\\"/g'); \
@@ -79,6 +81,8 @@ populate:
 		sleep 0.5; \
 		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/data-source/versions ; \
 		sleep 0.5; \
+		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/data-source-migration/versions ; \
+		sleep 0.5; \
 	done ; \
 
 	for i in {1..2}; do \
@@ -87,6 +91,8 @@ populate:
 		curl -s -o /dev/null -X DELETE -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/switch-cleanup-mode/versions/$$i ; \
 		sleep 0.5; \
 		curl -s -o /dev/null -X DELETE -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/data-source/versions/$$i ; \
+		sleep 0.5; \
+		curl -s -o /dev/null -X DELETE -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/data-source-migration/versions/$$i ; \
 		sleep 0.5; \
 	done ; \
 
