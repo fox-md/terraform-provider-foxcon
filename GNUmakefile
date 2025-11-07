@@ -118,7 +118,6 @@ docs:
 	cd tools && go generate ./... && cd ..
 	cd docs && \
 	find . -type f -name "*.md" -exec sed -i 's/&#96;/`/g' {} + && \
-	sed -i '/^description: |-/,/^---/c\description: |-\n\n---' index.md && \
 	cd ..
 
 .PHONY: fmt lint test testacc install generate restart up down apply plan docs
