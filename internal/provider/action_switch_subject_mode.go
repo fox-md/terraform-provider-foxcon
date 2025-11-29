@@ -1,0 +1,130 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+package provider
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/hashicorp/terraform-plugin-framework/action"
+	"github.com/hashicorp/terraform-plugin-framework/action/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+)
+
+var (
+	_ action.Action              = (*subjectModeAction)(nil)
+	_ action.ActionWithConfigure = &subjectModeAction{}
+)
+
+func SetSubjectModeAction() action.Action {
+	return &subjectModeAction{}
+}
+
+type subjectModeAction struct {
+	client *Client
+}
+
+func (r *subjectModeAction) Configure(_ context.Context, req action.ConfigureRequest, resp *action.ConfigureResponse) {
+	// Add a nil check when handling ProviderData because Terraform
+	// sets that data after it calls the ConfigureProvider RPC.
+	if req.ProviderData == nil {
+		return
+	}
+
+	clients, ok := req.ProviderData.(*providerClients)
+
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Data Source Configure Type",
+			fmt.Sprintf("Expected *Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	r.client = clients.SchemaRegistryClient
+}
+
+func (a *subjectModeAction) Metadata(ctx context.Context, req action.MetadataRequest, resp *action.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_set_subject_mode"
+}
+
+func (a *subjectModeAction) Schema(ctx context.Context, req action.SchemaRequest, resp *action.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		Description: "Prints a bufo image as ASCII art. List of available bufos found at: https://github.com/austinvalle/terraform-provider-bufo/tree/main/internal/provider/bufos",
+		Attributes: map[string]schema.Attribute{
+			"rest_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: "Schema registry rest endpoint",
+			},
+			"subject_name": schema.StringAttribute{
+				Required:    true,
+				Description: "Name of the subject",
+			},
+			"mode": schema.StringAttribute{
+				Required:    true,
+				Description: "Subject mode",
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"credentials": schema.SingleNestedBlock{
+				Attributes: map[string]schema.Attribute{
+					"key": schema.StringAttribute{
+						Optional: true,
+					},
+					"secret": schema.StringAttribute{
+						Optional: true,
+					},
+				},
+			},
+		},
+	}
+}
+
+func (a *subjectModeAction) Invoke(ctx context.Context, req action.InvokeRequest, resp *action.InvokeResponse) {
+	var config subjectModeResourceModel
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	creds := schemaRegistryCredentials{
+		RestEndpoint: config.RestEndpoint,
+		Credentials:  config.Credentials,
+	}
+
+	schemaAPIClient, err := schemaRegistryClientFactory(a.client, &creds)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error creating http client",
+			"Could not create http client. Unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	var subjectModePayload = SubjectModeRequest{
+		Mode: *config.Mode.ValueStringPointer(),
+	}
+
+	subjectMode, err := SetSubjectMode(schemaAPIClient, config.SubjectName.ValueString(), subjectModePayload)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error setting normalization",
+			"Could not set normalization unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	resp.SendProgress(action.InvokeProgressEvent{
+		Message: fmt.Sprintf("\n\nSubject %s mode has been set to '%s'", config.SubjectName.ValueString(), subjectMode.Mode),
+	})
+}
+
+type subjectModeResourceModel struct {
+	RestEndpoint types.String      `tfsdk:"rest_endpoint"`
+	SubjectName  types.String      `tfsdk:"subject_name"`
+	Mode         types.String      `tfsdk:"mode"`
+	Credentials  *credentialsModel `tfsdk:"credentials"`
+}

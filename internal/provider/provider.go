@@ -7,6 +7,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -258,6 +259,11 @@ func (p *foxconProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		SchemaRegistryClient: SchemaRegistryClient,
 	}
 
+	resp.ActionData = &providerClients{
+		CloudApiClient:       CloudApiClient,
+		SchemaRegistryClient: SchemaRegistryClient,
+	}
+
 	tflog.Info(ctx, "Configured foxcon client", map[string]any{"success": true})
 }
 
@@ -277,6 +283,12 @@ func (p *foxconProvider) Resources(_ context.Context) []func() resource.Resource
 		NewSubjectNormalizationResource,
 		NewSchemaRegistryNormalizationResource,
 		NewSubjectCleanupResource,
+	}
+}
+
+func (p *foxconProvider) Actions(ctx context.Context) []func() action.Action {
+	return []func() action.Action{
+		SetSubjectModeAction,
 	}
 }
 
