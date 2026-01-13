@@ -3,12 +3,12 @@
 page_title: "foxcon_schema_registry_normalization Resource - foxcon"
 subcategory: ""
 description: |-
-  Sets schema registry normalization value.
+  Sets schema registry normalization.
 ---
 
 # foxcon_schema_registry_normalization (Resource)
 
-Sets schema registry normalization value.
+Sets schema registry normalization.
 
 ## Example Usage
 

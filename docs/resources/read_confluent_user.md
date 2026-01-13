@@ -3,12 +3,12 @@
 page_title: "foxcon_read_confluent_user Resource - foxcon"
 subcategory: ""
 description: |-
-  Gets user id, user email and invitation id by setting one of this parameters. On deletion, resource also removes user from Confluent Cloud.
+  Gets user id, user email and invitation id by setting one of these parameters. On deletion, resource also removes user from Confluent Cloud.
 ---
 
 # foxcon_read_confluent_user (Resource)
 
-Gets user id, user email and invitation id by setting one of this parameters. On deletion, resource also removes user from Confluent Cloud.
+Gets user id, user email and invitation id by setting one of these parameters. On deletion, resource also removes user from Confluent Cloud.
 
 ## Example Usage
 

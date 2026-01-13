@@ -16,7 +16,7 @@ lint:
 #golangci-lint run
 
 generate:
-	cd tools; go generate ./...
+	cd tools; go generate ./...; cp -r ../examples/guides ../docs
 
 fmt:
 	gofmt -s -w -e .

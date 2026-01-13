@@ -3,12 +3,12 @@
 page_title: "foxcon_subject_normalization Resource - foxcon"
 subcategory: ""
 description: |-
-  Sets subject normalization value
+  Sets subject normalization.
 ---
 
 # foxcon_subject_normalization (Resource)
 
-Sets subject normalization value
+Sets subject normalization.
 
 ## Example Usage
 

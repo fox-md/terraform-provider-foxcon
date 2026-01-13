@@ -86,7 +86,7 @@ func (r *userResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Description: "Timestamp of the last apply execution.",
 			},
 		},
-		MarkdownDescription: "Gets user id, user email and invitation id by setting one of this parameters. On deletion, resource also removes user from Confluent Cloud.",
+		MarkdownDescription: "Gets user id, user email and invitation id by setting one of these parameters. On deletion, resource also removes user from Confluent Cloud.",
 	}
 }
 
