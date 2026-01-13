@@ -52,7 +52,6 @@ func (a *subjectModeAction) Metadata(ctx context.Context, req action.MetadataReq
 
 func (a *subjectModeAction) Schema(ctx context.Context, req action.SchemaRequest, resp *action.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Prints a bufo image as ASCII art. List of available bufos found at: https://github.com/austinvalle/terraform-provider-bufo/tree/main/internal/provider/bufos",
 		Attributes: map[string]schema.Attribute{
 			"rest_endpoint": schema.StringAttribute{
 				Optional:    true,
