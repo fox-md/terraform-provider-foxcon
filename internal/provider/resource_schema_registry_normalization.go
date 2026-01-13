@@ -83,7 +83,7 @@ func (r *schemaRegistryNormalizationResource) Schema(_ context.Context, _ resour
 				},
 			},
 		},
-		MarkdownDescription: "Sets schema registry normalization value.",
+		MarkdownDescription: "Sets schema registry normalization.",
 	}
 }
 

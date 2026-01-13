@@ -88,7 +88,7 @@ func (r *subjectNormalizationResource) Schema(_ context.Context, _ resource.Sche
 				},
 			},
 		},
-		MarkdownDescription: "Sets subject normalization value",
+		MarkdownDescription: "Sets subject normalization.",
 	}
 }
 
