@@ -73,7 +73,9 @@ func (a *subjectModeAction) Schema(ctx context.Context, req action.SchemaRequest
 						Optional: true,
 					},
 					"secret": schema.StringAttribute{
-						Optional: true,
+						Optional:            true,
+						Description:         "Terraform actions do NOT support sensitive attributes. Please keep that in mind.",
+						MarkdownDescription: "Terraform actions do NOT support sensitive attributes. Please keep that in mind.",
 					},
 				},
 			},
