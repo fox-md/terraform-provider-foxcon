@@ -37,14 +37,15 @@ func (d *subjectVersionsDataSource) Metadata(_ context.Context, req datasource.M
 // Schema defines the schema for the data source.
 func (d *subjectVersionsDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Reads subject schema versions.",
 		Attributes: map[string]schema.Attribute{
 			"rest_endpoint": schema.StringAttribute{
 				Optional:    true,
-				Description: "Schema registry rest endpoint",
+				Description: restEndpointDescription,
 			},
 			"subject_name": schema.StringAttribute{
 				Required:    true,
-				Description: "Name of the subject",
+				Description: subjectNameDescription,
 			},
 			"latest": schema.Int32Attribute{
 				Computed:    true,
@@ -70,16 +71,17 @@ func (d *subjectVersionsDataSource) Schema(_ context.Context, _ datasource.Schem
 			"credentials": schema.SingleNestedBlock{
 				Attributes: map[string]schema.Attribute{
 					"key": schema.StringAttribute{
-						Optional: true,
+						Optional:    true,
+						Description: schemaRegistryKeyDescription,
 					},
 					"secret": schema.StringAttribute{
-						Optional:  true,
-						Sensitive: true,
+						Optional:    true,
+						Sensitive:   true,
+						Description: schemaRegistrySecretDescription,
 					},
 				},
 			},
 		},
-		MarkdownDescription: "Reads subject schema versions",
 	}
 }
 

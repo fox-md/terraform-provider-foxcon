@@ -29,13 +29,13 @@ resource "foxcon_subject_normalization" "test" {
 
 ### Required
 
-- `subject_name` (String) Name of the subject
+- `subject_name` (String) The name of the subject.
 
 ### Optional
 
 - `credentials` (Block, Optional) (see [below for nested schema](#nestedblock--credentials))
-- `normalization_enabled` (Boolean) Normalization toggle
-- `rest_endpoint` (String) Schema registry rest endpoint
+- `normalization_enabled` (Boolean) Normalization toggle value.
+- `rest_endpoint` (String) The REST endpoint of the Schema Registry cluster.
 
 ### Read-Only
 
@@ -46,8 +46,8 @@ resource "foxcon_subject_normalization" "test" {
 
 Optional:
 
-- `key` (String)
-- `secret` (String, Sensitive)
+- `key` (String) The Schema Registry API Key.
+- `secret` (String, Sensitive) The Schema Registry API Secret.
 
 ## Import
 

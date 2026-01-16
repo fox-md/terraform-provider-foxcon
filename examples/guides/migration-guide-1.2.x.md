@@ -1,7 +1,7 @@
 ---
-page_title: "Foxcon Provider 1.2.1: Upgrade Guide for Provider Schema configuration"
+page_title: "Foxcon Provider 1.2.x: Upgrade Guide for Provider Schema configuration"
 ---
-# Foxcon Provider 1.2.1: Upgrade Guide for Provider Schema configuration
+# Foxcon Provider 1.2.x: Upgrade Guide for Provider Schema configuration
 
 ## Summary
 

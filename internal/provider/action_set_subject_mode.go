@@ -7,8 +7,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/action/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -52,30 +54,34 @@ func (a *subjectModeAction) Metadata(ctx context.Context, req action.MetadataReq
 
 func (a *subjectModeAction) Schema(ctx context.Context, req action.SchemaRequest, resp *action.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Provides a Subject Mode action that sets Subject Mode on a Schema Registry cluster on Confluent Cloud.",
 		Attributes: map[string]schema.Attribute{
 			"rest_endpoint": schema.StringAttribute{
 				Optional:    true,
-				Description: "Schema registry rest endpoint",
+				Description: restEndpointDescription,
 			},
 			"subject_name": schema.StringAttribute{
 				Required:    true,
-				Description: "Name of the subject",
+				Description: subjectNameDescription,
 			},
 			"mode": schema.StringAttribute{
 				Required:    true,
-				Description: "Subject mode",
+				Description: "The mode of the specified subject. Accepted values are: `READWRITE`, `READONLY`, `READONLY_OVERRIDE` and `IMPORT`.",
+				Validators: []validator.String{
+					stringvalidator.OneOf("READWRITE", "READONLY", "READONLY_OVERRIDE", "IMPORT"),
+				},
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"credentials": schema.SingleNestedBlock{
 				Attributes: map[string]schema.Attribute{
 					"key": schema.StringAttribute{
-						Optional: true,
+						Optional:    true,
+						Description: schemaRegistryKeyDescription,
 					},
 					"secret": schema.StringAttribute{
-						Optional:            true,
-						Description:         "Terraform actions do NOT support sensitive attributes. Please keep that in mind.",
-						MarkdownDescription: "Terraform actions do NOT support sensitive attributes. Please keep that in mind.",
+						Optional:    true,
+						Description: schemaRegistrySecretDescription + " Terraform actions do NOT support sensitive attributes. Please keep that in mind.",
 					},
 				},
 			},
@@ -119,7 +125,7 @@ func (a *subjectModeAction) Invoke(ctx context.Context, req action.InvokeRequest
 	}
 
 	resp.SendProgress(action.InvokeProgressEvent{
-		Message: fmt.Sprintf("\n\nSubject %s mode has been set to '%s'", config.SubjectName.ValueString(), subjectMode.Mode),
+		Message: fmt.Sprintf("\n\nSubject '%s' has been set to the '%s' mode", config.SubjectName.ValueString(), subjectMode.Mode),
 	})
 }
 

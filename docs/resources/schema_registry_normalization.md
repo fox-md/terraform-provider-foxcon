@@ -29,8 +29,8 @@ resource "foxcon_schema_registry_normalization" "test" {
 ### Optional
 
 - `credentials` (Block, Optional) (see [below for nested schema](#nestedblock--credentials))
-- `normalization_enabled` (Boolean) Normalization toggle
-- `rest_endpoint` (String) Schema registry rest endpoint
+- `normalization_enabled` (Boolean) Normalization toggle value.
+- `rest_endpoint` (String) The REST endpoint of the Schema Registry cluster.
 
 ### Read-Only
 
@@ -41,8 +41,8 @@ resource "foxcon_schema_registry_normalization" "test" {
 
 Optional:
 
-- `key` (String) Schema registry user.
-- `secret` (String, Sensitive) Schema registry secret.
+- `key` (String) The Schema Registry API Key.
+- `secret` (String, Sensitive) The Schema Registry API Secret.
 
 ## Import
 
