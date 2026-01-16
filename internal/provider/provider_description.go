@@ -4,7 +4,7 @@
 package provider
 
 var providerDescription string = "`foxcon` provider extends Confluent official [confluentinc/confluent](https://registry.terraform.io/providers/confluentinc/confluent/latest/docs) provider.\n\n" +
-	"`foxcon` includes below:" +
+	"`foxcon` includes below resources:" +
 	`
 - Normalization configuration for subject.
 - Normalization configuration for schema registry.
