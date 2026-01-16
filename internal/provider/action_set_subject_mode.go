@@ -59,6 +59,9 @@ func (a *subjectModeAction) Schema(ctx context.Context, req action.SchemaRequest
 			"rest_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: restEndpointDescription,
+				Validators: []validator.String{
+					EndpointValidator{},
+				},
 			},
 			"subject_name": schema.StringAttribute{
 				Required:    true,
