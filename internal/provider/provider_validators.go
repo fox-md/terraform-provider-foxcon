@@ -13,19 +13,19 @@ import (
 type EndpointValidator struct{}
 
 func (v EndpointValidator) Description(_ context.Context) string {
-	return "String must start with 'http'"
+	return "String must start with 'http://' or 'https://'"
 }
 
 func (v EndpointValidator) MarkdownDescription(_ context.Context) string {
-	return "String must start with `http`"
+	return "String must start with 'http://' or 'https://'"
 }
 
 func (v EndpointValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if !strings.HasPrefix(req.ConfigValue.ValueString(), "http") {
+	if !strings.HasPrefix(req.ConfigValue.ValueString(), "http://") || !strings.HasPrefix(req.ConfigValue.ValueString(), "https://") {
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid URL",
-			"The value must start with 'http'.",
+			"The value must start with 'http://' or 'https://'.",
 		)
 	}
 }
