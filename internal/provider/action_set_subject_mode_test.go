@@ -27,7 +27,27 @@ action "foxcon_set_subject_mode" "ro" {
 `,
 				ExpectError: regexp.MustCompile(`The value must start with 'http://' or 'https://'`),
 			},
-			// Delete testing automatically occurs in TestCase
+		},
+	})
+}
+
+func TestSetSubjectModeActionWrongMode(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cloudProviderConfig + `
+action "foxcon_set_subject_mode" "ro" {
+  config {
+    subject_name = "test"
+    mode = "WRONGMODE"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`Attribute mode value must be one of: \[\"READWRITE\" \"READONLY\"
+\"READONLY_OVERRIDE\" \"IMPORT\"\]`),
+			},
 		},
 	})
 }
