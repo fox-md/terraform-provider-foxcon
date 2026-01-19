@@ -10,13 +10,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/action/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 var (
-	_ action.Action              = (*subjectModeAction)(nil)
-	_ action.ActionWithConfigure = &subjectModeAction{}
+	_ action.Action                   = (*subjectModeAction)(nil)
+	_ action.ActionWithConfigure      = &subjectModeAction{}
+	_ action.ActionWithValidateConfig = &subjectModeAction{}
 )
 
 func SetSubjectModeAction() action.Action {
@@ -48,6 +50,16 @@ func (r *subjectModeAction) Configure(_ context.Context, req action.ConfigureReq
 	r.client = clients.SchemaRegistryClient
 }
 
+func (a *subjectModeAction) ValidateConfig(ctx context.Context, req action.ValidateConfigRequest, resp *action.ValidateConfigResponse) {
+	var config subjectModeResourceModel
+
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+}
+
 func (a *subjectModeAction) Metadata(ctx context.Context, req action.MetadataRequest, resp *action.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_set_subject_mode"
 }
@@ -56,22 +68,31 @@ func (a *subjectModeAction) Schema(ctx context.Context, req action.SchemaRequest
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Provides a Subject Mode action that sets Subject Mode on a Schema Registry cluster on Confluent Cloud.",
 		Attributes: map[string]schema.Attribute{
-			"rest_endpoint": schema.StringAttribute{
-				Optional:    true,
-				Description: restEndpointDescription,
-				Validators: []validator.String{
-					EndpointValidator{},
-				},
-			},
 			"subject_name": schema.StringAttribute{
 				Required:    true,
 				Description: subjectNameDescription,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"mode": schema.StringAttribute{
 				Required:    true,
 				Description: "The mode of the specified subject. Accepted values are: `READWRITE`, `READONLY`, `READONLY_OVERRIDE` and `IMPORT`.",
 				Validators: []validator.String{
 					stringvalidator.OneOf("READWRITE", "READONLY", "READONLY_OVERRIDE", "IMPORT"),
+				},
+			},
+			"rest_endpoint": schema.StringAttribute{
+				Optional:    true,
+				Description: restEndpointDescription,
+				Validators: []validator.String{
+					EndpointValidator{},
+					stringvalidator.AlsoRequires(
+						path.MatchRoot("credentials").AtName("key"),
+					),
+					stringvalidator.AlsoRequires(
+						path.MatchRoot("credentials").AtName("secret"),
+					),
 				},
 			},
 		},
@@ -81,10 +102,26 @@ func (a *subjectModeAction) Schema(ctx context.Context, req action.SchemaRequest
 					"key": schema.StringAttribute{
 						Optional:    true,
 						Description: schemaRegistryKeyDescription,
+						Validators: []validator.String{
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("rest_endpoint"),
+							),
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("credentials").AtName("secret"),
+							),
+						},
 					},
 					"secret": schema.StringAttribute{
 						Optional:    true,
 						Description: schemaRegistrySecretDescription + " Terraform actions do NOT support sensitive attributes. Please keep that in mind.",
+						Validators: []validator.String{
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("rest_endpoint"),
+							),
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("credentials").AtName("key"),
+							),
+						},
 					},
 				},
 			},
