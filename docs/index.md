@@ -14,6 +14,7 @@ description: |-
 - Confluent invitation resource that acts as original, however also deletes user from Confluent on resource deletion.
 - Cleanup of schema versions. Can be performed for soft-deleted or all non-latest versions.
 - `foxcon_confluent_read_user` that reads user details from Confluent on resources creation and deletes user from Confluent on resource deletion.
+- `foxcon_set_subject_mode` action that sets subject mode adhoc.
 
 ## Example Usage
 

@@ -1,18 +1,122 @@
-// // Copyright (c) HashiCorp, Inc.
-// // SPDX-License-Identifier: MPL-2.0
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
 
-// package provider
+package provider
 
-// import (
-// 	"fmt"
-// 	"io"
-// 	"net/http"
-// 	"testing"
+import (
+	"regexp"
+	"testing"
 
-// 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-// 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-// 	"github.com/hashicorp/terraform-plugin-testing/tfversion"
-// )
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+)
+
+func TestSetSubjectModeActionWrongRestEndpoint(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cloudProviderConfig + `
+action "foxcon_set_subject_mode" "ro" {
+  config {
+    rest_endpoint = "httpp://localhost"
+    subject_name = "test"
+    mode = "READONLY"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`The value must start with 'http://' or 'https://'`),
+			},
+		},
+	})
+}
+
+func TestSetSubjectModeActionWrongMode(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cloudProviderConfig + `
+action "foxcon_set_subject_mode" "ro" {
+  config {
+    subject_name = "test"
+    mode = "WRONGMODE"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`Attribute mode value must be one of: \[\"READWRITE\" \"READONLY\"
+\"READONLY_OVERRIDE\" \"IMPORT\"\]`),
+			},
+		},
+	})
+}
+
+func TestSetSubjectModeActionEmptySubject(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cloudProviderConfig + `
+action "foxcon_set_subject_mode" "ro" {
+  config {
+    subject_name = ""
+    mode = "READONLY"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`Attribute subject_name string length must be at least 1`),
+			},
+		},
+	})
+}
+
+func TestSetSubjectModeActionNoCredentials(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cloudProviderConfig + `
+action "foxcon_set_subject_mode" "ro" {
+  config {
+    rest_endpoint = "http://localhost"
+    subject_name = "test"
+    mode = "READONLY"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`Attribute "credentials" must be specified when "rest_endpoint" is specified`),
+			},
+		},
+	})
+}
+
+func TestSetSubjectModeActionNoRestEndpoint(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cloudProviderConfig + `
+action "foxcon_set_subject_mode" "ro" {
+  config {
+    credentials {
+	  key = "admin"
+      secret = "admin"
+    }
+    subject_name = "test"
+    mode = "READONLY"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`Attribute "rest_endpoint" must be specified when "credentials.key" is
+specified`),
+			},
+		},
+	})
+}
 
 // func TestSubjectModeAction(t *testing.T) {
 

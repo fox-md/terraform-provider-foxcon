@@ -44,6 +44,7 @@ func (r *subjectCleanupResource) Metadata(_ context.Context, req resource.Metada
 // Schema defines the schema for the resource.
 func (r *subjectCleanupResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Deletes schema versions depending on the configured clean-up method.",
 		Attributes: map[string]schema.Attribute{
 			"rest_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -51,14 +52,14 @@ func (r *subjectCleanupResource) Schema(_ context.Context, _ resource.SchemaRequ
 			},
 			"subject_name": schema.StringAttribute{
 				Required:    true,
-				Description: "Name of the subject.",
+				Description: subjectNameDescription,
 			},
 			"cleanup_method": schema.StringAttribute{
 				Required: true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("KEEP_LATEST_ONLY", "KEEP_ACTIVE_ONLY"),
 				},
-				Description: "Cleanup method type. Must be set to `KEEP_LATEST_ONLY` or `KEEP_ACTIVE_ONLY`.",
+				Description: "Cleanup method type. Accepted values are: `KEEP_LATEST_ONLY` and `KEEP_ACTIVE_ONLY`.",
 			},
 			"latest_schema_version": schema.Int32Attribute{
 				Computed:    true,
@@ -84,16 +85,17 @@ func (r *subjectCleanupResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"credentials": schema.SingleNestedBlock{
 				Attributes: map[string]schema.Attribute{
 					"key": schema.StringAttribute{
-						Optional: true,
+						Optional:    true,
+						Description: schemaRegistryKeyDescription,
 					},
 					"secret": schema.StringAttribute{
-						Optional:  true,
-						Sensitive: true,
+						Optional:    true,
+						Sensitive:   true,
+						Description: schemaRegistrySecretDescription,
 					},
 				},
 			},
 		},
-		MarkdownDescription: "Deletes schema versions depending on the configured clean-up method.",
 	}
 }
 

@@ -50,15 +50,7 @@ func (p *foxconProvider) Metadata(_ context.Context, _ provider.MetadataRequest,
 // Schema defines the provider-level schema for configuration data.
 func (p *foxconProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "`foxcon` provider extends Confluent official [confluentinc/confluent](https://registry.terraform.io/providers/confluentinc/confluent/latest/docs) provider.\n\n" +
-			"`foxcon` includes below resources:" +
-			`
-- Normalization configuration for subject.
-- Normalization configuration for schema registry.
-- Confluent invitation resource that acts as original, however also deletes user from Confluent on resource deletion.
-- Cleanup of schema versions. Can be performed for soft-deleted or all non-latest versions.
-			` +
-			"- `foxcon_confluent_read_user` that reads user details from Confluent on resources creation and deletes user from Confluent on resource deletion.",
+		MarkdownDescription: providerDescription,
 		Attributes: map[string]schema.Attribute{
 			"api_endpoint": schema.StringAttribute{
 				Optional:    true,
@@ -175,33 +167,6 @@ func (p *foxconProvider) Configure(ctx context.Context, req provider.ConfigureRe
 	if !config.SchemaRegistryEndpoint.IsNull() {
 		schema_registry_rest_endpoint = config.SchemaRegistryEndpoint.ValueString()
 	}
-
-	// If any of the expected configurations are missing, return
-	// errors with provider-specific guidance.
-
-	// if cloud_api_key == "" {
-	// 	resp.Diagnostics.AddAttributeError(
-	// 		path.Root("cloud_api_key"),
-	// 		"Missing Confluent API Key",
-	// 		"The provider cannot create the Confluent API client as there is a missing or empty value for the Confluent API username. "+
-	// 			"Set the username value in the configuration or use the CONFLUENT_CLOUD_API_KEY environment variable. "+
-	// 			"If either is already set, ensure the value is not empty.",
-	// 	)
-	// }
-
-	// if cloud_api_secret == "" {
-	// 	resp.Diagnostics.AddAttributeError(
-	// 		path.Root("cloud_api_secret"),
-	// 		"Missing Confluent API Secret",
-	// 		"The provider cannot create the Confluent API client as there is a missing or empty value for the Confluent API password. "+
-	// 			"Set the password value in the configuration or use the CONFLUENT_CLOUD_API_SECRET environment variable. "+
-	// 			"If either is already set, ensure the value is not empty.",
-	// 	)
-	// }
-
-	// if resp.Diagnostics.HasError() {
-	// 	return
-	// }
 
 	ctx = tflog.SetField(ctx, "api_endpoint", api_endpoint)
 	ctx = tflog.SetField(ctx, "cloud_api_key", cloud_api_key)

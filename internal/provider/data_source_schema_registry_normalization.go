@@ -36,10 +36,11 @@ func (d *schemaRegistryNormalizationDataSource) Metadata(_ context.Context, req 
 // Schema defines the schema for the data source.
 func (d *schemaRegistryNormalizationDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Reads schema registry normalization value.",
 		Attributes: map[string]schema.Attribute{
 			"rest_endpoint": schema.StringAttribute{
 				Optional:    true,
-				Description: "Schema registry rest endpoint",
+				Description: restEndpointDescription,
 			},
 			"normalization_enabled": schema.BoolAttribute{
 				Computed:    true,
@@ -50,16 +51,17 @@ func (d *schemaRegistryNormalizationDataSource) Schema(_ context.Context, _ data
 			"credentials": schema.SingleNestedBlock{
 				Attributes: map[string]schema.Attribute{
 					"key": schema.StringAttribute{
-						Optional: true,
+						Optional:    true,
+						Description: schemaRegistryKeyDescription,
 					},
 					"secret": schema.StringAttribute{
-						Optional:  true,
-						Sensitive: true,
+						Optional:    true,
+						Description: schemaRegistrySecretDescription,
+						Sensitive:   true,
 					},
 				},
 			},
 		},
-		MarkdownDescription: "Read schema registry normalization value",
 	}
 }
 

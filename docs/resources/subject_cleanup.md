@@ -39,8 +39,8 @@ resource "foxcon_subject_cleanup" "active" {
 
 ### Required
 
-- `cleanup_method` (String) Cleanup method type. Must be set to `KEEP_LATEST_ONLY` or `KEEP_ACTIVE_ONLY`.
-- `subject_name` (String) Name of the subject.
+- `cleanup_method` (String) Cleanup method type. Accepted values are: `KEEP_LATEST_ONLY` and `KEEP_ACTIVE_ONLY`.
+- `subject_name` (String) The name of the subject.
 
 ### Optional
 
@@ -59,8 +59,8 @@ resource "foxcon_subject_cleanup" "active" {
 
 Optional:
 
-- `key` (String)
-- `secret` (String, Sensitive)
+- `key` (String) The Schema Registry API Key.
+- `secret` (String, Sensitive) The Schema Registry API Secret.
 
 ## Import
 

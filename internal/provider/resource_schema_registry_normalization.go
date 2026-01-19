@@ -45,24 +45,12 @@ func (r *schemaRegistryNormalizationResource) Schema(_ context.Context, _ resour
 		Attributes: map[string]schema.Attribute{
 			"rest_endpoint": schema.StringAttribute{
 				Optional:    true,
-				Description: "Schema registry rest endpoint",
+				Description: restEndpointDescription,
 			},
 			"normalization_enabled": schema.BoolAttribute{
 				Optional:    true,
-				Description: "Normalization toggle",
+				Description: normalizationToggleDescription,
 			},
-			// "credentials": schema.SingleNestedAttribute{
-			// 	Required: true,
-			// 	Attributes: map[string]schema.Attribute{
-			// 		"key": schema.StringAttribute{
-			// 			Required: true,
-			// 		},
-			// 		"secret": schema.StringAttribute{
-			// 			Required:  true,
-			// 			Sensitive: true,
-			// 		},
-			// 	},
-			// },
 			"last_updated": schema.StringAttribute{
 				Computed:    true,
 				Description: "Timestamp of the last apply execution.",
@@ -73,12 +61,12 @@ func (r *schemaRegistryNormalizationResource) Schema(_ context.Context, _ resour
 				Attributes: map[string]schema.Attribute{
 					"key": schema.StringAttribute{
 						Optional:    true,
-						Description: "Schema registry user.",
+						Description: schemaRegistryKeyDescription,
 					},
 					"secret": schema.StringAttribute{
 						Optional:    true,
 						Sensitive:   true,
-						Description: "Schema registry secret.",
+						Description: schemaRegistrySecretDescription,
 					},
 				},
 			},
