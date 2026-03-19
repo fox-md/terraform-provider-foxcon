@@ -10,9 +10,9 @@ import (
 )
 
 type schemaVersions struct {
-	softDeleted      *[]int
-	active           *[]int
-	all              *[]int
+	softDeleted      []int
+	active           []int
+	all              []int
 	client           *Client
 	deleteCandidates []int
 	schemasToKeep    int
@@ -27,7 +27,7 @@ func (r *schemaVersions) get(model subjectCleanupResourceModel) error {
 func (r *schemaVersions) countSchemasToKeep(model subjectCleanupResourceModel) {
 	switch model.CleanupMethod {
 	case types.StringValue("KEEP_ACTIVE_ONLY"):
-		r.schemasToKeep = len(*r.active)
+		r.schemasToKeep = len(r.active)
 	case types.StringValue("KEEP_LATEST_ONLY"):
 		r.schemasToKeep = 1
 	case types.StringValue("MAX_STORED_SCHEMAS"):
@@ -42,7 +42,7 @@ func (r *schemaVersions) cleanDeleteCandidates(ctx context.Context, model subjec
 }
 
 func (r *schemaVersions) calculateDeleteCandidates() {
-	if len(*r.all) > r.schemasToKeep {
-		r.deleteCandidates = (*r.all)[:len(*r.all)-r.schemasToKeep]
+	if len(r.all) > r.schemasToKeep {
+		r.deleteCandidates = r.all[:len(r.all)-r.schemasToKeep]
 	}
 }

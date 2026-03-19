@@ -149,23 +149,23 @@ func (d *subjectVersionsDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	latestVersion := (*subjectVersions.all)[len(*subjectVersions.all)-1]
+	latestVersion := subjectVersions.all[len(subjectVersions.all)-1]
 	config.LatestSchemaVersion = types.Int32Value(int32(latestVersion))
 
 	var all []attr.Value
-	for _, id := range *subjectVersions.all {
+	for _, id := range subjectVersions.all {
 		all = append(all, types.Int32Value(int32(id)))
 	}
 	config.AllVersions, _ = types.ListValue(types.Int32Type, all)
 
 	var active []attr.Value
-	for _, id := range *subjectVersions.active {
+	for _, id := range subjectVersions.active {
 		active = append(active, types.Int32Value(int32(id)))
 	}
 	config.ActiveVersions, _ = types.ListValue(types.Int32Type, active)
 
 	var softDeleted []attr.Value
-	for _, id := range *subjectVersions.softDeleted {
+	for _, id := range subjectVersions.softDeleted {
 		softDeleted = append(softDeleted, types.Int32Value(int32(id)))
 	}
 	config.SoftDeletedVersions, _ = types.ListValue(types.Int32Type, softDeleted)

@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-func ListSubjectVersions(client *Client, subject_name string, deleted bool) (*[]int, error) {
+func ListSubjectVersions(client *Client, subject_name string, deleted bool) ([]int, error) {
 
 	if subject_name == "" {
 		return nil, fmt.Errorf("subject name not configured")
@@ -59,7 +59,7 @@ func ListSubjectVersions(client *Client, subject_name string, deleted bool) (*[]
 		return nil, err
 	}
 
-	return &response, nil
+	return response, nil
 }
 
 func DeleteSchemaVersion(client *Client, subject_name string, version int, permanent bool) error {
@@ -84,7 +84,7 @@ func DeleteSchemaVersion(client *Client, subject_name string, version int, perma
 	return nil
 }
 
-func GetSchemaVersions(model subjectCleanupResourceModel, client *Client) (*[]int, *[]int, *[]int, error) {
+func GetSchemaVersions(model subjectCleanupResourceModel, client *Client) ([]int, []int, []int, error) {
 	all, err := ListSubjectVersions(client, model.SubjectName.ValueString(), true)
 	if err != nil {
 		return nil, nil, nil, err
@@ -97,15 +97,15 @@ func GetSchemaVersions(model subjectCleanupResourceModel, client *Client) (*[]in
 
 	var softDeleted []int
 
-	for _, v := range *all {
-		if !slices.Contains(*active, v) {
+	for _, v := range all {
+		if !slices.Contains(active, v) {
 			softDeleted = append(softDeleted, v)
 		}
 	}
 
-	sort.Ints(*all)
-	sort.Ints(*active)
-	return all, active, &softDeleted, nil
+	sort.Ints(all)
+	sort.Ints(active)
+	return all, active, softDeleted, nil
 }
 
 func DeleteSchemaVersions(versions *[]int, ctx context.Context, client *Client, model subjectCleanupResourceModel, soft bool) error {
@@ -154,7 +154,7 @@ func SubjectCleanup(ctx context.Context, client *Client, model *subjectCleanupRe
 		return diags, err
 	}
 
-	latestVersion := (*subjectVersions.all)[len(*subjectVersions.all)-1]
+	latestVersion := subjectVersions.all[len(subjectVersions.all)-1]
 
 	var lastDeleted []attr.Value
 	for _, id := range subjectVersions.deleteCandidates {
