@@ -670,3 +670,200 @@ resource "foxcon_subject_cleanup" "test" {
 		},
 	})
 }
+
+func TestSubjectCleanupNonExistingMethod(t *testing.T) {
+
+	subject_name = "keep-latest"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_cleanup" "latest" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  cleanup_method = "METHOD_THAT_DOESNOT_EXIST"
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`Attribute cleanup_method value must be one of: \[\"KEEP_LATEST_ONLY\"
+\"KEEP_ACTIVE_ONLY\" \"MAX_STORED_SCHEMAS\"\]`),
+			},
+		},
+	})
+}
+
+func TestSubjectCleanupKeepNActiveNoNumber(t *testing.T) {
+
+	subject_name = "keep-n-active"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_cleanup" "latest" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  cleanup_method = "MAX_STORED_SCHEMAS"
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`Number of schemas must be more than 0 when cleanup_method is set to
+\'MAX_STORED_SCHEMAS\'`),
+			},
+		},
+	})
+}
+
+func TestSubjectCleanupKeepNOnlyHappyPath(t *testing.T) {
+
+	subject_name = "subj-keep-n"
+
+	resource.Test(t, resource.TestCase{
+
+		Steps: []resource.TestStep{
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_cleanup" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  cleanup_method = "MAX_STORED_SCHEMAS"
+  number_of_schemas_to_keep = 3
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "subject_name", subject_name),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "cleanup_method", "MAX_STORED_SCHEMAS"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "last_deleted.#", "2"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "last_deleted.0", "1"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "last_deleted.1", "2"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "latest_schema_version", "5"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "cleanup_needed", "false"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "rest_endpoint", rest_endpoint),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.test", "last_updated"),
+				),
+			},
+		},
+	})
+}
+
+func TestSubjectCleanupKeepNOnlyWithDeletedHappyPath(t *testing.T) {
+
+	subject_name = "keep-n"
+
+	resource.Test(t, resource.TestCase{
+
+		Steps: []resource.TestStep{
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_cleanup" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  cleanup_method = "MAX_STORED_SCHEMAS"
+  number_of_schemas_to_keep = 4
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "subject_name", subject_name),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "cleanup_method", "MAX_STORED_SCHEMAS"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "last_deleted.#", "1"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "last_deleted.0", "1"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "latest_schema_version", "5"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "cleanup_needed", "false"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "rest_endpoint", rest_endpoint),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.test", "last_updated"),
+				),
+			},
+		},
+	})
+}
+
+func TestSubjectCleanupActiveOnlyToNOnly(t *testing.T) {
+
+	subject_name = "subj-cleanup-new-method"
+
+	resource.Test(t, resource.TestCase{
+
+		Steps: []resource.TestStep{
+			{
+				ExternalProviders: map[string]resource.ExternalProvider{
+					"foxcon": {
+						VersionConstraint: "1.3.2",
+						Source:            "registry.terraform.io/fox-md/foxcon",
+					},
+				},
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_cleanup" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  cleanup_method = "KEEP_ACTIVE_ONLY"
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "subject_name", subject_name),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "cleanup_method", "KEEP_ACTIVE_ONLY"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "last_deleted.#", "2"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "last_deleted.0", "1"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "last_deleted.1", "2"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "latest_schema_version", "5"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "cleanup_needed", "false"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "rest_endpoint", rest_endpoint),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.test", "last_updated"),
+				),
+			},
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_cleanup" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  cleanup_method = "MAX_STORED_SCHEMAS"
+  number_of_schemas_to_keep = 2
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "subject_name", subject_name),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "cleanup_method", "MAX_STORED_SCHEMAS"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "last_deleted.#", "1"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "last_deleted.0", "3"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "latest_schema_version", "5"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "cleanup_needed", "false"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "rest_endpoint", rest_endpoint),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.test", "last_updated"),
+				),
+			},
+		},
+	})
+}
