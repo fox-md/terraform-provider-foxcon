@@ -867,3 +867,51 @@ resource "foxcon_subject_cleanup" "test" {
 		},
 	})
 }
+
+func TestSubjectCleanupEmptySubject(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_cleanup" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = ""
+  cleanup_method = "MAX_STORED_SCHEMAS"
+  number_of_schemas_to_keep = 2
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`Attribute subject_name string length must be at least 1`),
+			},
+		},
+	})
+}
+
+func TestSubjectCleanupWrongRestEndpoint(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_cleanup" "test" {
+  rest_endpoint = "localhost"
+  subject_name = "test"
+  cleanup_method = "MAX_STORED_SCHEMAS"
+  number_of_schemas_to_keep = 2
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`The value must start with 'http://' or 'https://'`),
+			},
+		},
+	})
+}

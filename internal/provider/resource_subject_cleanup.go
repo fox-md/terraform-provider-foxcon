@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -47,17 +48,29 @@ func (r *subjectCleanupResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"rest_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: "Schema registry rest endpoint.",
+				Validators: []validator.String{
+					EndpointValidator{},
+					stringvalidator.AlsoRequires(
+						path.MatchRoot("credentials").AtName("key"),
+					),
+					stringvalidator.AlsoRequires(
+						path.MatchRoot("credentials").AtName("secret"),
+					),
+				},
 			},
 			"subject_name": schema.StringAttribute{
 				Required:    true,
 				Description: subjectNameDescription,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"cleanup_method": schema.StringAttribute{
 				Required: true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("KEEP_LATEST_ONLY", "KEEP_ACTIVE_ONLY", "MAX_STORED_SCHEMAS"),
 				},
-				Description: "Cleanup method mode. Accepted values are: `KEEP_LATEST_ONLY`, `MAX_STORED_SCHEMAS` and `KEEP_ACTIVE_ONLY`.",
+				Description: "Cleanup method mode. Accepted values are: `KEEP_LATEST_ONLY`, `KEEP_ACTIVE_ONLY` and `MAX_STORED_SCHEMAS`.",
 			},
 			"number_of_schemas_to_keep": schema.Int64Attribute{
 				Optional:    true,
@@ -93,11 +106,17 @@ func (r *subjectCleanupResource) Schema(_ context.Context, _ resource.SchemaRequ
 					"key": schema.StringAttribute{
 						Optional:    true,
 						Description: schemaRegistryKeyDescription,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
 					},
 					"secret": schema.StringAttribute{
 						Optional:    true,
 						Sensitive:   true,
 						Description: schemaRegistrySecretDescription,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
 					},
 				},
 			},
