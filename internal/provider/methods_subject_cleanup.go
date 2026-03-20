@@ -169,3 +169,29 @@ func SubjectCleanup(ctx context.Context, client *Client, model *subjectCleanupRe
 
 	return diags, nil
 }
+
+func ReadSubjectVersions(ctx context.Context, client *Client, model subjectCleanupResourceModel) (schemaVersions, error) {
+
+	var subjectVersions schemaVersions
+
+	creds := schemaRegistryCredentials{
+		RestEndpoint: model.RestEndpoint,
+		Credentials:  model.Credentials,
+	}
+
+	schemaAPIClient, err := schemaRegistryClientFactory(client, &creds)
+	if err != nil {
+		return subjectVersions, err
+	}
+
+	subjectVersions.client = schemaAPIClient
+	err = subjectVersions.get(model)
+	if err != nil {
+		return subjectVersions, err
+	}
+
+	subjectVersions.countSchemasToKeep(model)
+	subjectVersions.calculateDeleteCandidates()
+
+	return subjectVersions, nil
+}

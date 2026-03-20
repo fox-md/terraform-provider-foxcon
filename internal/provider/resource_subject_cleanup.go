@@ -197,7 +197,6 @@ func (r *subjectCleanupResource) Create(ctx context.Context, req resource.Create
 func (r *subjectCleanupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Get current state
 	var state subjectCleanupResourceModel
-	var subjectVersions schemaVersions
 
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -205,12 +204,7 @@ func (r *subjectCleanupResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	creds := schemaRegistryCredentials{
-		RestEndpoint: state.RestEndpoint,
-		Credentials:  state.Credentials,
-	}
-
-	schemaAPIClient, err := schemaRegistryClientFactory(r.client, &creds)
+	subjectVersions, err := ReadSubjectVersions(ctx, r.client, state)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -218,19 +212,6 @@ func (r *subjectCleanupResource) Read(ctx context.Context, req resource.ReadRequ
 		)
 		return
 	}
-
-	subjectVersions.client = schemaAPIClient
-	err = subjectVersions.get(state)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error getting subject versions",
-			"Could not get subject versions. Unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	subjectVersions.countSchemasToKeep(state)
-	subjectVersions.calculateDeleteCandidates()
 
 	if len(subjectVersions.deleteCandidates) > 0 {
 		state.CleanupNeeded = types.BoolValue(true)

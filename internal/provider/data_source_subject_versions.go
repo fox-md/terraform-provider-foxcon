@@ -110,7 +110,6 @@ func (d *subjectVersionsDataSource) ValidateConfig(ctx context.Context, req data
 func (d *subjectVersionsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 
 	var config subjectVersionsDataSourceModel
-	var subjectVersions schemaVersions
 
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -118,33 +117,17 @@ func (d *subjectVersionsDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	creds := schemaRegistryCredentials{
-		RestEndpoint: config.RestEndpoint,
-		Credentials:  config.Credentials,
-	}
-
-	schemaAPIClient, err := schemaRegistryClientFactory(d.client, &creds)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error creating http client",
-			"Could not create http client. Unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	subjectVersions.client = schemaAPIClient
-
 	var subject_config = subjectCleanupResourceModel{
 		RestEndpoint: config.RestEndpoint,
 		Credentials:  config.Credentials,
 		SubjectName:  config.SubjectName,
 	}
 
-	err = subjectVersions.get(subject_config)
+	subjectVersions, err := ReadSubjectVersions(ctx, d.client, subject_config)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error creating get subject versions",
-			"Could not get subject versions. Unexpected error: "+err.Error(),
+			"Error creating http client",
+			"Could not create http client. Unexpected error: "+err.Error(),
 		)
 		return
 	}
