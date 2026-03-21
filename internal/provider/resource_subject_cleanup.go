@@ -108,6 +108,12 @@ func (r *subjectCleanupResource) Schema(_ context.Context, _ resource.SchemaRequ
 						Description: schemaRegistryKeyDescription,
 						Validators: []validator.String{
 							stringvalidator.LengthAtLeast(1),
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("credentials").AtName("secret"),
+							),
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("rest_endpoint"),
+							),
 						},
 					},
 					"secret": schema.StringAttribute{
@@ -116,6 +122,12 @@ func (r *subjectCleanupResource) Schema(_ context.Context, _ resource.SchemaRequ
 						Description: schemaRegistrySecretDescription,
 						Validators: []validator.String{
 							stringvalidator.LengthAtLeast(1),
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("credentials").AtName("key"),
+							),
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("rest_endpoint"),
+							),
 						},
 					},
 				},
