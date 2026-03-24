@@ -4,6 +4,10 @@
 package provider
 
 import (
+	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 )
@@ -53,3 +57,24 @@ provider "foxcon" {
   schema_registry_api_secret = "` + api_secret + `"
 }
 `
+
+func validateSubjectVersions(subject string, expectedResponse string) error {
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/subjects/%s/versions?deleted=true", rest_endpoint, subject), nil)
+	req.SetBasicAuth(api_key, api_secret)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send HTTP request: %s", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: got %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+
+	body, _ := io.ReadAll(resp.Body)
+	strbody := string(body)
+	if strbody != expectedResponse {
+		return fmt.Errorf("unexpected body: got '%s', want '%s'", strbody, expectedResponse)
+	}
+	return nil
+}

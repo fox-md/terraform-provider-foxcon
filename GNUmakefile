@@ -64,6 +64,7 @@ populate:
 	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/subj-cleanup-new-method ; \
 	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/subj-keep-n ; \
 	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/keep-n ; \
+	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/keep-all ; \
 
 	schema=$$(cat tests/schemas/v1.json | tr -d '\n\r' | sed 's/"/\\"/g'); \
 	payload="{\"schema\": \"$${schema}\", \"schemaType\": \"JSON\"}"; \
@@ -89,6 +90,8 @@ populate:
 		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/subj-keep-n/versions ; \
 		sleep 0.25; \
 		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/keep-n/versions ; \
+		sleep 0.25; \
+		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/keep-all/versions ; \
 		sleep 0.25; \
 	done ; \
 

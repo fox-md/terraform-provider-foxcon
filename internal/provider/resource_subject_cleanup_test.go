@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestSubjectCleanupLatestHappyFlow(t *testing.T) {
@@ -759,11 +760,24 @@ resource "foxcon_subject_cleanup" "test" {
 					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.test", "last_updated"),
 				),
 			},
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						expected := "[3,4,5]"
+						err := validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
+				),
+			},
 		},
 	})
 }
 
-func TestSubjectCleanupKeepNOnlyWithDeletedHappyPath(t *testing.T) {
+func TestSubjectCleanupMaxStoredWithDeletedHappyPath(t *testing.T) {
 
 	subject_name = "keep-n"
 
@@ -794,6 +808,19 @@ resource "foxcon_subject_cleanup" "test" {
 					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "rest_endpoint", rest_endpoint),
 					// Verify dynamic values have any value set in the state.
 					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.test", "last_updated"),
+				),
+			},
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						expected := "[2,3,4,5]"
+						err := validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
 				),
 			},
 		},
@@ -864,6 +891,19 @@ resource "foxcon_subject_cleanup" "test" {
 					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.test", "last_updated"),
 				),
 			},
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						expected := "[4,5]"
+						err := validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
+				),
+			},
 		},
 	})
 }
@@ -911,6 +951,79 @@ resource "foxcon_subject_cleanup" "test" {
 }
 `,
 				ExpectError: regexp.MustCompile(`The value must start with 'http://' or 'https://'`),
+			},
+		},
+	})
+}
+
+func TestSubjectCleanupBigMaxStoredVersions(t *testing.T) {
+
+	subject_name = "keep-all"
+
+	resource.Test(t, resource.TestCase{
+
+		Steps: []resource.TestStep{
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_cleanup" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "` + subject_name + `"
+  cleanup_method = "MAX_STORED_SCHEMAS"
+  number_of_schemas_to_keep = 1000
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "subject_name", subject_name),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "cleanup_method", "MAX_STORED_SCHEMAS"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "last_deleted.#", "0"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "cleanup_needed", "false"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.test", "rest_endpoint", rest_endpoint),
+					// Verify dynamic values have any value set in the state.
+					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.test", "last_updated"),
+				),
+			},
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						expected := "[1,2,3,4,5]"
+						err := validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
+
+func TestSubjectCleanupSetZeroMaxStoredVersions(t *testing.T) {
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: cloudProviderConfig + `
+resource "foxcon_subject_cleanup" "test" {
+  rest_endpoint = "` + rest_endpoint + `"
+  subject_name = "test"
+  cleanup_method = "MAX_STORED_SCHEMAS"
+  number_of_schemas_to_keep = 0
+  credentials {
+    key = "` + api_key + `"
+    secret = "` + api_secret + `"
+  }
+}
+`,
+				ExpectError: regexp.MustCompile(`Number of schemas must be more than 0 when cleanup_method is set to
+'MAX_STORED_SCHEMAS'`),
 			},
 		},
 	})
