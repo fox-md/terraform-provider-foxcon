@@ -4,10 +4,7 @@
 package provider
 
 import (
-	"fmt"
-	"os/exec"
 	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -49,6 +46,19 @@ resource "foxcon_subject_cleanup" "latest" {
 					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.latest", "last_updated"),
 				),
 			},
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						expected := "[5]"
+						err := validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
+				),
+			},
 		},
 	})
 }
@@ -87,6 +97,19 @@ resource "foxcon_subject_cleanup" "active" {
 					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.active", "last_updated"),
 				),
 			},
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						expected := "[4,5]"
+						err := validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
+				),
+			},
 		},
 	})
 }
@@ -120,6 +143,19 @@ resource "foxcon_subject_cleanup" "latest" {
 					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "cleanup_needed", "false"),
 					// Verify dynamic values have any value set in the state.
 					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.latest", "last_updated"),
+				),
+			},
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						expected := "[1]"
+						err := validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
 				),
 			},
 		},
@@ -157,6 +193,19 @@ resource "foxcon_subject_cleanup" "latest" {
 					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.latest", "last_updated"),
 				),
 			},
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						expected := "[1]"
+						err := validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
+				),
+			},
 		},
 	})
 }
@@ -192,6 +241,19 @@ resource "foxcon_subject_cleanup" "latest" {
 					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.latest", "last_updated"),
 				),
 			},
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						expected := "[1]"
+						err := validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
+				),
+			},
 		},
 	})
 }
@@ -221,11 +283,24 @@ resource "foxcon_subject_cleanup" "latest" {
 					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.latest", "last_updated"),
 				),
 			},
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						expected := "[1]"
+						err := validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
+				),
+			},
 		},
 	})
 }
 
-func TestSubjectCleanupKeepActiveIfOneVersionNoProviderNoConfig(t *testing.T) {
+func TestSubjectCleanupKeepActiveIfOneVersionNoProviderNoConfigErrorHandling(t *testing.T) {
 
 	subject_name = "one"
 
@@ -275,6 +350,19 @@ resource "foxcon_subject_cleanup" "latest" {
 					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.latest", "last_updated"),
 				),
 			},
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						expected := "[1]"
+						err := validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
+				),
+			},
 		},
 	})
 }
@@ -311,6 +399,26 @@ resource "foxcon_subject_cleanup" "latest" {
 				),
 			},
 			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						schemasToAdd := []int{2}
+						err := addSubjectVersions(subject_name, schemasToAdd)
+						if err != nil {
+							return err
+						}
+
+						expected := "[1,2]"
+						err = validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+
+						return nil
+					},
+				),
+			},
+			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
   rest_endpoint = "` + rest_endpoint + `"
@@ -322,30 +430,12 @@ resource "foxcon_subject_cleanup" "latest" {
   }
 }
 `,
-				PreConfig: func() {
-					// Get the root of the Git repo
-					gitRootCmd := exec.Command("git", "rev-parse", "--show-toplevel")
-					output, err := gitRootCmd.Output()
-					if err != nil {
-						fmt.Printf("Failed to get git root: %v\n", err)
-						return
-					}
-					gitRoot := strings.TrimSpace(string(output))
-					cmd := exec.Command("make", "add2oneactive")
-					cmd.Dir = gitRoot
-					output, err = cmd.CombinedOutput()
-					if err != nil {
-						fmt.Printf("Command output:\n%s\n", string(output))
-						fmt.Printf("error:%s", err.Error())
-						//panic("error:" + err.Error())
-					}
-				},
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "rest_endpoint", rest_endpoint),
 					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "subject_name", subject_name),
 					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "cleanup_method", "KEEP_ACTIVE_ONLY"),
 					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "last_deleted.#", "0"),
-					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "latest_schema_version", "1"),
+					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "latest_schema_version", "2"),
 					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "cleanup_needed", "false"),
 					// Verify dynamic values have any value set in the state.
 					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.latest", "last_updated"),
@@ -387,24 +477,26 @@ resource "foxcon_subject_cleanup" "latest" {
 				),
 			},
 			{
-				PreConfig: func() {
-					// Get the root of the Git repo
-					gitRootCmd := exec.Command("git", "rev-parse", "--show-toplevel")
-					output, err := gitRootCmd.Output()
-					if err != nil {
-						fmt.Printf("Failed to get git root: %v\n", err)
-						return
-					}
-					gitRoot := strings.TrimSpace(string(output))
-					cmd := exec.Command("make", "add2onelatest")
-					cmd.Dir = gitRoot
-					output, err = cmd.CombinedOutput()
-					if err != nil {
-						fmt.Printf("Command output:\n%s\n", string(output))
-						fmt.Printf("error:%s", err.Error())
-						//panic("error:" + err.Error())
-					}
-				},
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						schemasToAdd := []int{2}
+						err := addSubjectVersions(subject_name, schemasToAdd)
+						if err != nil {
+							return err
+						}
+
+						expected := "[1,2]"
+						err = validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+
+						return nil
+					},
+				),
+			},
+			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
   rest_endpoint = "` + rest_endpoint + `"
@@ -426,6 +518,19 @@ resource "foxcon_subject_cleanup" "latest" {
 					resource.TestCheckResourceAttr("foxcon_subject_cleanup.latest", "cleanup_needed", "false"),
 					// Verify dynamic values have any value set in the state.
 					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.latest", "last_updated"),
+				),
+			},
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						expected := "[2]"
+						err := validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
 				),
 			},
 		},
@@ -465,6 +570,19 @@ resource "foxcon_subject_cleanup" "test" {
 					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.test", "last_updated"),
 				),
 			},
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						expected := "[3,4,5]"
+						err := validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
+				),
+			},
 			// Update and Read testing
 			{
 				Config: cloudProviderConfig + `
@@ -491,12 +609,24 @@ resource "foxcon_subject_cleanup" "test" {
 					resource.TestCheckResourceAttrSet("foxcon_subject_cleanup.test", "last_updated"),
 				),
 			},
-			// Delete testing automatically occurs in TestCase
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						expected := "[5]"
+						err := validateSubjectVersions(subject_name, expected)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
+				),
+			},
 		},
 	})
 }
 
-func TestSubjectCleanupNoCleanupMethod(t *testing.T) {
+func TestSubjectCleanupNoCleanupMethodErrorHandling(t *testing.T) {
 
 	subject_name = "dummy"
 
@@ -521,7 +651,7 @@ resource "foxcon_subject_cleanup" "test" {
 	})
 }
 
-func TestSubjectCleanupNoCredentials(t *testing.T) {
+func TestSubjectCleanupNoCredentialsErrorHandling(t *testing.T) {
 
 	subject_name = "dummy"
 
@@ -543,7 +673,7 @@ resource "foxcon_subject_cleanup" "test" {
 	})
 }
 
-func TestSubjectCleanupNoRestEndpoint(t *testing.T) {
+func TestSubjectCleanupNoRestEndpointErrorHandling(t *testing.T) {
 
 	subject_name = "dummy"
 
@@ -568,7 +698,7 @@ resource "foxcon_subject_cleanup" "test" {
 	})
 }
 
-func TestSubjectCleanupNoSecret(t *testing.T) {
+func TestSubjectCleanupNoSecretErrorHandling(t *testing.T) {
 
 	subject_name = "dummy"
 
@@ -593,7 +723,7 @@ resource "foxcon_subject_cleanup" "test" {
 	})
 }
 
-func TestSubjectCleanupNoKey(t *testing.T) {
+func TestSubjectCleanupNoKeyErrorHandling(t *testing.T) {
 
 	subject_name = "dummy"
 
@@ -672,7 +802,7 @@ resource "foxcon_subject_cleanup" "test" {
 	})
 }
 
-func TestSubjectCleanupNonExistingMethod(t *testing.T) {
+func TestSubjectCleanupNonExistingMethodErrorHandling(t *testing.T) {
 
 	subject_name = "keep-latest"
 
@@ -699,7 +829,7 @@ resource "foxcon_subject_cleanup" "latest" {
 	})
 }
 
-func TestSubjectCleanupKeepNActiveNoNumber(t *testing.T) {
+func TestSubjectCleanupKeepNActiveNoNumberErrorHandling(t *testing.T) {
 
 	subject_name = "keep-n-active"
 
@@ -908,7 +1038,7 @@ resource "foxcon_subject_cleanup" "test" {
 	})
 }
 
-func TestSubjectCleanupEmptySubject(t *testing.T) {
+func TestSubjectCleanupEmptySubjectErrorHandling(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -932,7 +1062,7 @@ resource "foxcon_subject_cleanup" "test" {
 	})
 }
 
-func TestSubjectCleanupWrongRestEndpoint(t *testing.T) {
+func TestSubjectCleanupInvalidRestEndpointErrorHandling(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -1004,7 +1134,7 @@ resource "foxcon_subject_cleanup" "test" {
 	})
 }
 
-func TestSubjectCleanupSetZeroMaxStoredVersions(t *testing.T) {
+func TestSubjectCleanupZeroMaxStoredVersionsErrorHandling(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,

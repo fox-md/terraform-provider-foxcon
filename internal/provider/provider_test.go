@@ -4,9 +4,15 @@
 package provider
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
@@ -58,6 +64,11 @@ provider "foxcon" {
 }
 `
 
+type Payload struct {
+	Schema     string `json:"schema"`
+	SchemaType string `json:"schemaType"`
+}
+
 func validateSubjectVersions(subject string, expectedResponse string) error {
 	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/subjects/%s/versions?deleted=true", rest_endpoint, subject), nil)
 	req.SetBasicAuth(api_key, api_secret)
@@ -75,6 +86,68 @@ func validateSubjectVersions(subject string, expectedResponse string) error {
 	strbody := string(body)
 	if strbody != expectedResponse {
 		return fmt.Errorf("unexpected body: got '%s', want '%s'", strbody, expectedResponse)
+	}
+	return nil
+}
+
+func removeSubjectVersions(subject string, schemasToRemove []int) error {
+
+	for _, i := range schemasToRemove {
+		req, _ := http.NewRequest("DELETE", fmt.Sprintf("%s/subjects/%s/versions/%d", rest_endpoint, subject, i), nil)
+		req.Header.Set("Content-Type", "application/vnd.schemaregistry.v1+json")
+		req.SetBasicAuth(api_key, api_secret)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("failed to send HTTP request: %s", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("unexpected status code: got %d, want %d", resp.StatusCode, http.StatusOK)
+		}
+	}
+
+	return nil
+}
+
+func addSubjectVersions(subject string, schemasToAdd []int) error {
+	schemasLocation := "tests/schemas"
+
+	gitRootCmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	output, err := gitRootCmd.Output()
+	if err != nil {
+		fmt.Printf("Failed to get git root: %v\n", err)
+	}
+	gitRoot := strings.TrimSpace(string(output))
+
+	for _, i := range schemasToAdd {
+		data, err := os.ReadFile(fmt.Sprintf("%s/%s/v%d.json", gitRoot, schemasLocation, i))
+		if err != nil {
+			log.Fatalf("failed to open file: %s", err)
+		}
+
+		payload := Payload{
+			Schema:     string(data),
+			SchemaType: "JSON",
+		}
+
+		jsonPayload, err := json.Marshal(payload)
+		if err != nil {
+			return err
+		}
+
+		req, err := http.NewRequest("POST", fmt.Sprintf("%s/subjects/%s/versions", rest_endpoint, subject), bytes.NewBuffer(jsonPayload))
+		req.Header.Set("Content-Type", "application/vnd.schemaregistry.v1+json")
+		req.SetBasicAuth(api_key, api_secret)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return fmt.Errorf("failed to send HTTP request: %s", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("unexpected status code: got %d, want %d", resp.StatusCode, http.StatusOK)
+		}
 	}
 	return nil
 }
