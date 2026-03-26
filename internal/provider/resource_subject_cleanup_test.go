@@ -18,7 +18,26 @@ func TestSubjectCleanupLatestHappyFlow(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						schemasToAdd := []int{1, 2, 3, 4, 5}
+						err := addSubjectVersions(subject_name, schemasToAdd)
+						if err != nil {
+							return err
+						}
+
+						schemasToRemove := []int{1, 2}
+						err = removeSubjectVersions(subject_name, schemasToRemove)
+						if err != nil {
+							return err
+						}
+
+						return nil
+					},
+				),
+			},
 			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
@@ -70,7 +89,26 @@ func TestSubjectCleanupActiveHappyFlow(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						schemasToAdd := []int{1, 2, 3, 4, 5}
+						err := addSubjectVersions(subject_name, schemasToAdd)
+						if err != nil {
+							return err
+						}
+
+						schemasToRemove := []int{1, 2, 3}
+						err = removeSubjectVersions(subject_name, schemasToRemove)
+						if err != nil {
+							return err
+						}
+
+						return nil
+					},
+				),
+			},
 			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "active" {
@@ -284,7 +322,7 @@ resource "foxcon_subject_cleanup" "latest" {
 				),
 			},
 			{
-				Config: cloudProviderConfig + "",
+				Config: schemaProviderConfig + "",
 				Check: resource.ComposeTestCheckFunc(
 					func(s *terraform.State) error {
 						expected := "[1]"
@@ -374,7 +412,20 @@ func TestSubjectCleanupAddSchemaVersionWhenActive(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						schemasToAdd := []int{1}
+						err := addSubjectVersions(subject_name, schemasToAdd)
+						if err != nil {
+							return err
+						}
+
+						return nil
+					},
+				),
+			},
 			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
@@ -452,7 +503,20 @@ func TestSubjectCleanupAddSchemaVersionWhenLatest(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						schemasToAdd := []int{1}
+						err := addSubjectVersions(subject_name, schemasToAdd)
+						if err != nil {
+							return err
+						}
+
+						return nil
+					},
+				),
+			},
 			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
@@ -544,7 +608,26 @@ func TestSubjectCleanupFromActiveToLatestHappyFlow(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						schemasToAdd := []int{1, 2, 3, 4, 5}
+						err := addSubjectVersions(subject_name, schemasToAdd)
+						if err != nil {
+							return err
+						}
+
+						schemasToRemove := []int{1, 2}
+						err = removeSubjectVersions(subject_name, schemasToRemove)
+						if err != nil {
+							return err
+						}
+
+						return nil
+					},
+				),
+			},
 			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "test" {
@@ -583,7 +666,6 @@ resource "foxcon_subject_cleanup" "test" {
 					},
 				),
 			},
-			// Update and Read testing
 			{
 				Config: cloudProviderConfig + `
 			resource "foxcon_subject_cleanup" "test" {
@@ -804,7 +886,7 @@ resource "foxcon_subject_cleanup" "test" {
 
 func TestSubjectCleanupNonExistingMethodErrorHandling(t *testing.T) {
 
-	subject_name = "keep-latest"
+	subject_name = "test"
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -912,10 +994,29 @@ func TestSubjectCleanupMaxStoredWithDeletedHappyPath(t *testing.T) {
 	subject_name = "keep-n"
 
 	resource.Test(t, resource.TestCase{
-
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						schemasToAdd := []int{1, 2, 3, 4, 5}
+						err := addSubjectVersions(subject_name, schemasToAdd)
+						if err != nil {
+							return err
+						}
+
+						schemasToRemove := []int{1, 2, 3}
+						err = removeSubjectVersions(subject_name, schemasToRemove)
+						if err != nil {
+							return err
+						}
+
+						return nil
+					},
+				),
+			},
+			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "test" {
   rest_endpoint = "` + rest_endpoint + `"
@@ -1091,10 +1192,22 @@ func TestSubjectCleanupBigMaxStoredVersions(t *testing.T) {
 	subject_name = "keep-all"
 
 	resource.Test(t, resource.TestCase{
-
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						subjectsToAdd := []int{1, 2, 3, 4, 5}
+						err := addSubjectVersions(subject_name, subjectsToAdd)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
+				),
+			},
+			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "test" {
   rest_endpoint = "` + rest_endpoint + `"

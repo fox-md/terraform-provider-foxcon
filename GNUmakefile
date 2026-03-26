@@ -53,34 +53,19 @@ plan:
 
 populate:
 	echo "Preparing testdata"
-	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/keep-latest ; \
-	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/keep-active ; \
-	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/switch-cleanup-mode ; \
 	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/one ; \
-	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/one-to-two-active ; \
-	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/one-to-two-latest ; \
 	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/data-source ; \
 	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/data-source-migration ; \
 	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/subj-cleanup-new-method ; \
 	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/subj-keep-n ; \
-	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/keep-n ; \
-	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/keep-all ; \
 
 	schema=$$(cat tests/schemas/v1.json | tr -d '\n\r' | sed 's/"/\\"/g'); \
 	payload="{\"schema\": \"$${schema}\", \"schemaType\": \"JSON\"}"; \
 	curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/one/versions ; \
-	curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/one-to-two-active/versions ; \
-	curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/one-to-two-latest/versions ; \
 
 	for i in {1..5}; do \
 		schema=$$(cat tests/schemas/v$$i.json | tr -d '\n\r' | sed 's/"/\\"/g'); \
 		payload="{\"schema\": \"$${schema}\", \"schemaType\": \"JSON\"}"; \
-		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/keep-latest/versions ; \
-		sleep 0.25; \
-		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/keep-active/versions ; \
-		sleep 0.25; \
-		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/switch-cleanup-mode/versions ; \
-		sleep 0.25; \
 		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/data-source/versions ; \
 		sleep 0.25; \
 		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/data-source-migration/versions ; \
@@ -89,17 +74,9 @@ populate:
 		sleep 0.25; \
 		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/subj-keep-n/versions ; \
 		sleep 0.25; \
-		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/keep-n/versions ; \
-		sleep 0.25; \
-		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/keep-all/versions ; \
-		sleep 0.25; \
 	done ; \
 
 	for i in {1..2}; do \
-		curl -s -o /dev/null -X DELETE -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/keep-latest/versions/$$i ; \
-		sleep 0.25; \
-		curl -s -o /dev/null -X DELETE -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/switch-cleanup-mode/versions/$$i ; \
-		sleep 0.25; \
 		curl -s -o /dev/null -X DELETE -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/data-source/versions/$$i ; \
 		sleep 0.25; \
 		curl -s -o /dev/null -X DELETE -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/data-source-migration/versions/$$i ; \
@@ -107,23 +84,6 @@ populate:
 		curl -s -o /dev/null -X DELETE -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/subj-cleanup-new-method/versions/$$i ; \
 		sleep 0.25; \
 	done ; \
-
-	for i in {1..3}; do \
-		curl -s -o /dev/null -X DELETE -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/keep-active/versions/$$i ; \
-		sleep 0.25; \
-		curl -s -o /dev/null -X DELETE -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/keep-n/versions/$$i ; \
-		sleep 0.25; \
-	done ; \
-
-add2oneactive:
-	schema=$$(cat tests/schemas/v2.json | tr -d '\n\r' | sed 's/"/\\"/g'); \
-	payload="{\"schema\": \"$${schema}\", \"schemaType\": \"JSON\"}"; \
-	curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/one-to-two-active/versions ; \
-
-add2onelatest:
-	schema=$$(cat tests/schemas/v2.json | tr -d '\n\r' | sed 's/"/\\"/g'); \
-	payload="{\"schema\": \"$${schema}\", \"schemaType\": \"JSON\"}"; \
-	curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/one-to-two-latest/versions ; \
 
 clean:
 	@rm -rf terraform.tfstate terraform.tfstate.*

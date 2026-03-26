@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -120,10 +119,25 @@ func addSubjectVersions(subject string, schemasToAdd []int) error {
 	}
 	gitRoot := strings.TrimSpace(string(output))
 
+	jsonPayload := []byte(`{"compatibility": "NONE"}`)
+	req, _ := http.NewRequest("PUT", fmt.Sprintf("%s/config/%s", rest_endpoint, subject), bytes.NewBuffer(jsonPayload))
+	req.Header.Set("Content-Type", "application/vnd.schemaregistry.v1+json")
+	req.SetBasicAuth(api_key, api_secret)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send HTTP request: %s", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: got %d, want %d while setting compatibility to NONE", resp.StatusCode, http.StatusOK)
+	}
+
+	defer resp.Body.Close()
+
 	for _, i := range schemasToAdd {
 		data, err := os.ReadFile(fmt.Sprintf("%s/%s/v%d.json", gitRoot, schemasLocation, i))
 		if err != nil {
-			log.Fatalf("failed to open file: %s", err)
+			return fmt.Errorf("failed to open file: %s", err)
 		}
 
 		payload := Payload{
@@ -136,7 +150,7 @@ func addSubjectVersions(subject string, schemasToAdd []int) error {
 			return err
 		}
 
-		req, err := http.NewRequest("POST", fmt.Sprintf("%s/subjects/%s/versions", rest_endpoint, subject), bytes.NewBuffer(jsonPayload))
+		req, _ := http.NewRequest("POST", fmt.Sprintf("%s/subjects/%s/versions", rest_endpoint, subject), bytes.NewBuffer(jsonPayload))
 		req.Header.Set("Content-Type", "application/vnd.schemaregistry.v1+json")
 		req.SetBasicAuth(api_key, api_secret)
 		resp, err := http.DefaultClient.Do(req)
@@ -146,7 +160,7 @@ func addSubjectVersions(subject string, schemasToAdd []int) error {
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("unexpected status code: got %d, want %d", resp.StatusCode, http.StatusOK)
+			return fmt.Errorf("unexpected status code: got %d, want %d while adding schemas v%d", resp.StatusCode, http.StatusOK, i)
 		}
 	}
 	return nil
