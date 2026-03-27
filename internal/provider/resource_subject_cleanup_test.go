@@ -159,7 +159,6 @@ func TestSubjectCleanupKeepLatestIfOneVersion(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
 			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
@@ -207,7 +206,6 @@ func TestSubjectCleanupKeepActiveIfOneVersion(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
 			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
@@ -255,7 +253,6 @@ func TestSubjectCleanupKeepActiveIfOneVersionWrongProvider(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
 			{
 				Config: schemaProviderWrongConfig + `
 resource "foxcon_subject_cleanup" "latest" {
@@ -303,7 +300,6 @@ func TestSubjectCleanupKeepActiveIfOneVersionUsingProvider(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
 			{
 				Config: schemaProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
@@ -340,12 +336,11 @@ resource "foxcon_subject_cleanup" "latest" {
 
 func TestSubjectCleanupKeepActiveIfOneVersionNoProviderNoConfigErrorHandling(t *testing.T) {
 
-	subject_name = "one"
+	subject_name = "test"
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
 			{
 				Config: emptyProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
@@ -370,7 +365,6 @@ func TestSubjectCleanupKeepActiveIfOneVersionEnvVarsProviderConfig(t *testing.T)
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
 			{
 				Config: emptyProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
@@ -715,7 +709,6 @@ func TestSubjectCleanupNoCleanupMethodErrorHandling(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
 			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "test" {
@@ -740,7 +733,6 @@ func TestSubjectCleanupNoCredentialsErrorHandling(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
 			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "test" {
@@ -762,7 +754,6 @@ func TestSubjectCleanupNoRestEndpointErrorHandling(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
 			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "test" {
@@ -787,7 +778,6 @@ func TestSubjectCleanupNoSecretErrorHandling(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
 			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "test" {
@@ -812,7 +802,6 @@ func TestSubjectCleanupNoKeyErrorHandling(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
 			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "test" {
@@ -837,7 +826,6 @@ func TestSubjectCleanupKeepActiveProviderMigration111To121Setup(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
 			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "test" {
@@ -891,7 +879,6 @@ func TestSubjectCleanupNonExistingMethodErrorHandling(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
 			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
@@ -918,7 +905,6 @@ func TestSubjectCleanupKeepNActiveNoNumberErrorHandling(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
-			// Create and Read testing
 			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "latest" {
@@ -938,15 +924,28 @@ resource "foxcon_subject_cleanup" "latest" {
 	})
 }
 
-func TestSubjectCleanupKeepNOnlyHappyPath(t *testing.T) {
+func TestSubjectCleanupMaxStoredHappyPath(t *testing.T) {
 
 	subject_name = "subj-keep-n"
 
 	resource.Test(t, resource.TestCase{
-
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						schemasToAdd := []int{1, 2, 3, 4, 5}
+						err := addSubjectVersions(subject_name, schemasToAdd)
+						if err != nil {
+							return err
+						}
+
+						return nil
+					},
+				),
+			},
+			{
 				Config: cloudProviderConfig + `
 resource "foxcon_subject_cleanup" "test" {
   rest_endpoint = "` + rest_endpoint + `"
@@ -1065,6 +1064,27 @@ func TestSubjectCleanupActiveOnlyToNOnly(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 
 		Steps: []resource.TestStep{
+			{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Config:                   cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						schemasToAdd := []int{1, 2, 3, 4, 5}
+						err := addSubjectVersions(subject_name, schemasToAdd)
+						if err != nil {
+							return err
+						}
+
+						schemasToRemove := []int{1, 2}
+						err = removeSubjectVersions(subject_name, schemasToRemove)
+						if err != nil {
+							return err
+						}
+
+						return nil
+					},
+				),
+			},
 			{
 				ExternalProviders: map[string]resource.ExternalProvider{
 					"foxcon": {

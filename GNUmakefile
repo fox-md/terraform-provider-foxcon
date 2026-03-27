@@ -54,36 +54,10 @@ plan:
 populate:
 	echo "Preparing testdata"
 	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/one ; \
-	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/data-source ; \
-	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/data-source-migration ; \
-	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/subj-cleanup-new-method ; \
-	curl -s -o /dev/null -X PUT -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility": "NONE"}'  http://localhost:8081/config/subj-keep-n ; \
 
 	schema=$$(cat tests/schemas/v1.json | tr -d '\n\r' | sed 's/"/\\"/g'); \
 	payload="{\"schema\": \"$${schema}\", \"schemaType\": \"JSON\"}"; \
 	curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/one/versions ; \
-
-	for i in {1..5}; do \
-		schema=$$(cat tests/schemas/v$$i.json | tr -d '\n\r' | sed 's/"/\\"/g'); \
-		payload="{\"schema\": \"$${schema}\", \"schemaType\": \"JSON\"}"; \
-		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/data-source/versions ; \
-		sleep 0.25; \
-		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/data-source-migration/versions ; \
-		sleep 0.25; \
-		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/subj-cleanup-new-method/versions ; \
-		sleep 0.25; \
-		curl -s -o /dev/null -X POST -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/subj-keep-n/versions ; \
-		sleep 0.25; \
-	done ; \
-
-	for i in {1..2}; do \
-		curl -s -o /dev/null -X DELETE -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/data-source/versions/$$i ; \
-		sleep 0.25; \
-		curl -s -o /dev/null -X DELETE -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/data-source-migration/versions/$$i ; \
-		sleep 0.25; \
-		curl -s -o /dev/null -X DELETE -u "admin:admin-secret" -H "Content-Type: application/vnd.schemaregistry.v1+json" --data "$$payload" http://localhost:8081/subjects/subj-cleanup-new-method/versions/$$i ; \
-		sleep 0.25; \
-	done ; \
 
 clean:
 	@rm -rf terraform.tfstate terraform.tfstate.*
@@ -97,4 +71,4 @@ docs:
 
 .PHONY: fmt lint test testacc install generate restart up down apply plan docs
 
-.SILENT: populate add2oneactive add2onelatest docs
+.SILENT: populate docs

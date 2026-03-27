@@ -10,15 +10,36 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestSubjectVersionsDataSourceRead(t *testing.T) {
 
-	subject_name = "data-source"
+	subject_name = "data-source-read"
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						schemasToAdd := []int{1, 2, 3, 4, 5}
+						err := addSubjectVersions(subject_name, schemasToAdd)
+						if err != nil {
+							return err
+						}
+
+						schemasToRemove := []int{1, 2}
+						err = removeSubjectVersions(subject_name, schemasToRemove)
+						if err != nil {
+							return err
+						}
+
+						return nil
+					},
+				),
+			},
 			{
 				Config: cloudProviderConfig + `
 data "foxcon_subject_versions" "test" {
@@ -43,24 +64,43 @@ data "foxcon_subject_versions" "test" {
 
 func TestSubjectVersionsDataSourceReadAfterV1Delete(t *testing.T) {
 
-	subject_name = "data-source"
+	subject_name = "data-source-hard"
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				PreConfig: func() {
-					req, _ := http.NewRequest("DELETE", fmt.Sprintf("%s/subjects/%s/versions/1?permanent=true", rest_endpoint, subject_name), nil)
-					req.SetBasicAuth(api_key, api_secret)
-					resp, err := http.DefaultClient.Do(req)
-					if err != nil {
-						panic("failed to send HTTP request:" + err.Error())
-					}
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						schemasToAdd := []int{1, 2, 3, 4, 5}
+						err := addSubjectVersions(subject_name, schemasToAdd)
+						if err != nil {
+							return err
+						}
 
-					if resp.StatusCode != http.StatusOK {
-						panic(fmt.Sprintf("unexpected status code: got %d, want %d", resp.StatusCode, http.StatusOK))
-					}
-				},
+						schemasToRemove := []int{1, 2}
+						err = removeSubjectVersions(subject_name, schemasToRemove)
+						if err != nil {
+							return err
+						}
+
+						req, _ := http.NewRequest("DELETE", fmt.Sprintf("%s/subjects/%s/versions/1?permanent=true", rest_endpoint, subject_name), nil)
+						req.SetBasicAuth(api_key, api_secret)
+						resp, err := http.DefaultClient.Do(req)
+						if err != nil {
+							return fmt.Errorf("failed to send HTTP request: %s", err.Error())
+						}
+
+						if resp.StatusCode != http.StatusOK {
+							return fmt.Errorf("unexpected status code: got %d, want %d", resp.StatusCode, http.StatusOK)
+						}
+
+						return nil
+					},
+				),
+			},
+			{
 				Config: cloudProviderConfig + `
 data "foxcon_subject_versions" "test" {
   rest_endpoint = "` + rest_endpoint + `"
@@ -90,6 +130,26 @@ func TestSubjectVersionsDataSourceReadProviderMigration111To121Setup(t *testing.
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
+			{
+				Config: cloudProviderConfig + "",
+				Check: resource.ComposeTestCheckFunc(
+					func(s *terraform.State) error {
+						schemasToAdd := []int{1, 2, 3, 4, 5}
+						err := addSubjectVersions(subject_name, schemasToAdd)
+						if err != nil {
+							return err
+						}
+
+						schemasToRemove := []int{1, 2}
+						err = removeSubjectVersions(subject_name, schemasToRemove)
+						if err != nil {
+							return err
+						}
+
+						return nil
+					},
+				),
+			},
 			{
 				Config: cloudProviderConfig + `
 data "foxcon_subject_versions" "test" {
@@ -127,9 +187,9 @@ data "foxcon_subject_versions" "test" {
 	})
 }
 
-func TestDataSourceReadSubjectWrongRestEndpoint(t *testing.T) {
+func TestDataSourceReadSubjectInvalidRestEndpointErrorHandling(t *testing.T) {
 
-	subject_name = "data-source-migration"
+	subject_name = "test"
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -151,7 +211,7 @@ data "foxcon_subject_versions" "test" {
 	})
 }
 
-func TestDataSourceReadSubjectEmptySubject(t *testing.T) {
+func TestDataSourceReadSubjectEmptySubjectErrorHandling(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -173,7 +233,7 @@ data "foxcon_subject_versions" "test" {
 	})
 }
 
-func TestDataSourceReadSubjectNoKey(t *testing.T) {
+func TestDataSourceReadSubjectNoKeyErrorHandling(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -195,7 +255,7 @@ specified`),
 	})
 }
 
-func TestDataSourceReadSubjectNoSecret(t *testing.T) {
+func TestDataSourceReadSubjectNoSecretErrorHandling(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
