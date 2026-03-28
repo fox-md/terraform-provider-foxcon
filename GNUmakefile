@@ -36,7 +36,7 @@ testacc:
 pretest: restart populate
 
 restart: down up
-	@for i in {1..20}; do code=$$(curl -LI -u "admin:admin-secret" http://localhost:8081 -o /dev/null -w '%{http_code}' -s);if [ "$$code" -eq 200 ]; then echo "Schema is UP" && exit 0; else sleep 5; fi; done; echo "Schema is DOWN" && exit 1
+	@for i in {1..25}; do code=$$(curl -LI -u "admin:admin-secret" http://localhost:8081 -o /dev/null -w '%{http_code}' -s);if [ "$$code" -eq 200 ]; then echo "Schema is UP" && exit 0; else sleep 5; fi; done; echo "Schema is DOWN" && exit 1
 
 up:
 	docker-compose up -d
