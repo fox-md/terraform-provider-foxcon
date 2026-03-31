@@ -68,21 +68,31 @@ type Payload struct {
 	SchemaType string `json:"schemaType"`
 }
 
-func validateSubjectVersions(subject string, expectedResponse string) error {
-	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/subjects/%s/versions?deleted=true", rest_endpoint, subject), nil)
+func callSchemaRegistry(method string, endpoint string, body io.Reader) (string, error) {
+	req, _ := http.NewRequest(method, endpoint, body)
+	req.Header.Set("Content-Type", "application/vnd.schemaregistry.v1+json")
 	req.SetBasicAuth(api_key, api_secret)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to send HTTP request: %s", err)
+		return "", fmt.Errorf("failed to send HTTP request: %s", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: got %d, want %d", resp.StatusCode, http.StatusOK)
+		return "", fmt.Errorf("unexpected status code: got %d, want %d", resp.StatusCode, http.StatusOK)
 	}
 
-	body, _ := io.ReadAll(resp.Body)
-	strbody := string(body)
+	respBody, _ := io.ReadAll(resp.Body)
+	strbody := string(respBody)
+	return strbody, nil
+}
+
+func validateSubjectVersions(subject string, expectedResponse string) error {
+	strbody, err := callSchemaRegistry("GET", fmt.Sprintf("%s/subjects/%s/versions?deleted=true", rest_endpoint, subject), nil)
+	if err != nil {
+		return err
+	}
+
 	if strbody != expectedResponse {
 		return fmt.Errorf("unexpected body: got '%s', want '%s'", strbody, expectedResponse)
 	}
@@ -92,17 +102,9 @@ func validateSubjectVersions(subject string, expectedResponse string) error {
 func removeSubjectVersions(subject string, schemasToRemove []int) error {
 
 	for _, i := range schemasToRemove {
-		req, _ := http.NewRequest("DELETE", fmt.Sprintf("%s/subjects/%s/versions/%d", rest_endpoint, subject, i), nil)
-		req.Header.Set("Content-Type", "application/vnd.schemaregistry.v1+json")
-		req.SetBasicAuth(api_key, api_secret)
-		resp, err := http.DefaultClient.Do(req)
+		_, err := callSchemaRegistry("DELETE", fmt.Sprintf("%s/subjects/%s/versions/%d", rest_endpoint, subject, i), nil)
 		if err != nil {
-			return fmt.Errorf("failed to send HTTP request: %s", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("unexpected status code: got %d, want %d", resp.StatusCode, http.StatusOK)
+			return err
 		}
 	}
 
@@ -120,19 +122,10 @@ func addSubjectVersions(subject string, schemasToAdd []int) error {
 	gitRoot := strings.TrimSpace(string(output))
 
 	jsonPayload := []byte(`{"compatibility": "NONE"}`)
-	req, _ := http.NewRequest("PUT", fmt.Sprintf("%s/config/%s", rest_endpoint, subject), bytes.NewBuffer(jsonPayload))
-	req.Header.Set("Content-Type", "application/vnd.schemaregistry.v1+json")
-	req.SetBasicAuth(api_key, api_secret)
-	resp, err := http.DefaultClient.Do(req)
+	_, err = callSchemaRegistry("PUT", fmt.Sprintf("%s/config/%s", rest_endpoint, subject), bytes.NewBuffer(jsonPayload))
 	if err != nil {
-		return fmt.Errorf("failed to send HTTP request: %s", err)
+		return err
 	}
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: got %d, want %d while setting compatibility to NONE", resp.StatusCode, http.StatusOK)
-	}
-
-	defer resp.Body.Close()
 
 	for _, i := range schemasToAdd {
 		data, err := os.ReadFile(fmt.Sprintf("%s/%s/v%d.json", gitRoot, schemasLocation, i))
@@ -149,18 +142,9 @@ func addSubjectVersions(subject string, schemasToAdd []int) error {
 		if err != nil {
 			return err
 		}
-
-		req, _ := http.NewRequest("POST", fmt.Sprintf("%s/subjects/%s/versions", rest_endpoint, subject), bytes.NewBuffer(jsonPayload))
-		req.Header.Set("Content-Type", "application/vnd.schemaregistry.v1+json")
-		req.SetBasicAuth(api_key, api_secret)
-		resp, err := http.DefaultClient.Do(req)
+		_, err = callSchemaRegistry("POST", fmt.Sprintf("%s/subjects/%s/versions", rest_endpoint, subject), bytes.NewBuffer(jsonPayload))
 		if err != nil {
-			return fmt.Errorf("failed to send HTTP request: %s", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("unexpected status code: got %d, want %d while adding schemas v%d", resp.StatusCode, http.StatusOK, i)
+			return err
 		}
 	}
 	return nil
