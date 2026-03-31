@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2021, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package provider
@@ -6,10 +6,9 @@ package provider
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -49,17 +48,37 @@ func (r *subjectCleanupResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"rest_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: "Schema registry rest endpoint.",
+				Validators: []validator.String{
+					EndpointValidator{},
+					stringvalidator.AlsoRequires(
+						path.MatchRoot("credentials").AtName("key"),
+					),
+					stringvalidator.AlsoRequires(
+						path.MatchRoot("credentials").AtName("secret"),
+					),
+				},
 			},
 			"subject_name": schema.StringAttribute{
 				Required:    true,
 				Description: subjectNameDescription,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"cleanup_method": schema.StringAttribute{
 				Required: true,
 				Validators: []validator.String{
-					stringvalidator.OneOf("KEEP_LATEST_ONLY", "KEEP_ACTIVE_ONLY"),
+					stringvalidator.OneOf("KEEP_LATEST_ONLY", "KEEP_ACTIVE_ONLY", "MAX_STORED_SCHEMAS"),
 				},
-				Description: "Cleanup method type. Accepted values are: `KEEP_LATEST_ONLY` and `KEEP_ACTIVE_ONLY`.",
+				Description: "Cleanup method mode. Accepted values are: `KEEP_LATEST_ONLY`, `KEEP_ACTIVE_ONLY` and `MAX_STORED_SCHEMAS`.",
+			},
+			"number_of_schemas_to_keep": schema.Int64Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "Number of schemas to keep in the subject.",
+				Validators: []validator.Int64{
+					SchemasNumberValidator{},
+				},
 			},
 			"latest_schema_version": schema.Int32Attribute{
 				Computed:    true,
@@ -87,11 +106,29 @@ func (r *subjectCleanupResource) Schema(_ context.Context, _ resource.SchemaRequ
 					"key": schema.StringAttribute{
 						Optional:    true,
 						Description: schemaRegistryKeyDescription,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("credentials").AtName("secret"),
+							),
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("rest_endpoint"),
+							),
+						},
 					},
 					"secret": schema.StringAttribute{
 						Optional:    true,
 						Sensitive:   true,
 						Description: schemaRegistrySecretDescription,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("credentials").AtName("key"),
+							),
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("rest_endpoint"),
+							),
+						},
 					},
 				},
 			},
@@ -103,6 +140,7 @@ type subjectCleanupResourceModel struct {
 	RestEndpoint      types.String      `tfsdk:"rest_endpoint"`
 	SubjectName       types.String      `tfsdk:"subject_name"`
 	Credentials       *credentialsModel `tfsdk:"credentials"`
+	SchemasToKeep     types.Int64       `tfsdk:"number_of_schemas_to_keep"`
 	LastSchemaVersion types.Int32       `tfsdk:"latest_schema_version"`
 	CleanupNeeded     types.Bool        `tfsdk:"cleanup_needed"`
 	CleanupMethod     types.String      `tfsdk:"cleanup_method"`
@@ -136,9 +174,7 @@ func (r *subjectCleanupResource) ValidateConfig(ctx context.Context, req resourc
 func (r *subjectCleanupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	// Retrieve values from plan
 	var plan subjectCleanupResourceModel
-	var latestVersion int
-	var deleteCandidates []int
-	var subjectVersions schemaVersions
+	var err error
 
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -146,12 +182,7 @@ func (r *subjectCleanupResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	creds := schemaRegistryCredentials{
-		RestEndpoint: plan.RestEndpoint,
-		Credentials:  plan.Credentials,
-	}
-
-	schemaAPIClient, err := schemaRegistryClientFactory(r.client, &creds)
+	diags, err = SubjectCleanup(ctx, r.client, &plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -160,51 +191,6 @@ func (r *subjectCleanupResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	subjectVersions.client = schemaAPIClient
-
-	err = subjectVersions.get(plan)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error getting subject versions",
-			"Could not get subject versions. Unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	err = subjectVersions.cleanSoftDeleted(ctx, plan)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error deleting soft-deleted versions",
-			"Could not delete soft-deleted versions. Unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	deleteCandidates = (*subjectVersions.softDeleted)
-
-	if plan.CleanupMethod == types.StringValue("KEEP_LATEST_ONLY") {
-		err := subjectVersions.cleanActiveNoneLatest(ctx, plan)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error deleting active versions",
-				"Could not delete active versions. Unexpected error: "+err.Error(),
-			)
-			return
-		}
-		deleteCandidates = (*subjectVersions.all)[:len(*subjectVersions.all)-1]
-	}
-
-	latestVersion = (*subjectVersions.all)[len(*subjectVersions.all)-1]
-
-	var lastDeleted []attr.Value
-	for _, id := range deleteCandidates {
-		lastDeleted = append(lastDeleted, types.Int32Value(int32(id)))
-	}
-
-	plan.LastSchemaVersion = types.Int32Value(int32(latestVersion))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC3339))
-	plan.CleanupNeeded = types.BoolValue(false)
-	plan.LastDeleted, diags = types.ListValue(types.Int32Type, lastDeleted)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -223,8 +209,6 @@ func (r *subjectCleanupResource) Create(ctx context.Context, req resource.Create
 func (r *subjectCleanupResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	// Get current state
 	var state subjectCleanupResourceModel
-	var deleteCandidates []int
-	var subjectVersions schemaVersions
 
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -232,12 +216,7 @@ func (r *subjectCleanupResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	creds := schemaRegistryCredentials{
-		RestEndpoint: state.RestEndpoint,
-		Credentials:  state.Credentials,
-	}
-
-	schemaAPIClient, err := schemaRegistryClientFactory(r.client, &creds)
+	subjectVersions, err := ReadSubjectVersions(ctx, r.client, state)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -246,25 +225,7 @@ func (r *subjectCleanupResource) Read(ctx context.Context, req resource.ReadRequ
 		return
 	}
 
-	subjectVersions.client = schemaAPIClient
-	err = subjectVersions.get(state)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error getting subject versions",
-			"Could not get subject versions. Unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	if state.CleanupMethod == types.StringValue("KEEP_LATEST_ONLY") {
-		deleteCandidates = (*subjectVersions.all)[:len(*subjectVersions.all)-1]
-	}
-
-	if state.CleanupMethod == types.StringValue("KEEP_ACTIVE_ONLY") {
-		deleteCandidates = (*subjectVersions.softDeleted)
-	}
-
-	if len(deleteCandidates) > 0 {
+	if len(subjectVersions.deleteCandidates) > 0 {
 		state.CleanupNeeded = types.BoolValue(true)
 	} else {
 		state.CleanupNeeded = types.BoolValue(false)
@@ -282,9 +243,7 @@ func (r *subjectCleanupResource) Read(ctx context.Context, req resource.ReadRequ
 func (r *subjectCleanupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Retrieve values from plan
 	var plan subjectCleanupResourceModel
-	var latestVersion int
-	var deleteCandidates []int
-	var subjectVersions schemaVersions
+	var err error
 
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -292,12 +251,7 @@ func (r *subjectCleanupResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	creds := schemaRegistryCredentials{
-		RestEndpoint: plan.RestEndpoint,
-		Credentials:  plan.Credentials,
-	}
-
-	schemaAPIClient, err := schemaRegistryClientFactory(r.client, &creds)
+	diags, err = SubjectCleanup(ctx, r.client, &plan)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -306,53 +260,6 @@ func (r *subjectCleanupResource) Update(ctx context.Context, req resource.Update
 		return
 	}
 
-	subjectVersions.client = schemaAPIClient
-	err = subjectVersions.get(plan)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error getting subject versions",
-			"Could not get subject versions. Unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	// Execute flow for the KEEP_ACTIVE_ONLY. Needed by both cleanup methods.
-	err = subjectVersions.cleanSoftDeleted(ctx, plan)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error deleting soft-deleted versions",
-			"Could not delete soft-deleted versions. Unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	deleteCandidates = (*subjectVersions.softDeleted)
-
-	if plan.CleanupMethod == types.StringValue("KEEP_LATEST_ONLY") {
-		err := subjectVersions.cleanActiveNoneLatest(ctx, plan)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error deleting active versions",
-				"Could not delete active versions. Unexpected error: "+err.Error(),
-			)
-			return
-		}
-
-		deleteCandidates = (*subjectVersions.all)[:len(*subjectVersions.all)-1]
-	}
-
-	latestVersion = (*subjectVersions.all)[len(*subjectVersions.all)-1]
-
-	// Map response body to schema and populate Computed attribute values
-	var lastDeleted []attr.Value
-	for _, id := range deleteCandidates {
-		lastDeleted = append(lastDeleted, types.Int32Value(int32(id)))
-	}
-
-	plan.LastSchemaVersion = types.Int32Value(int32(latestVersion))
-	plan.LastUpdated = types.StringValue(time.Now().Format(time.RFC3339))
-	plan.CleanupNeeded = types.BoolValue(false)
-	plan.LastDeleted, diags = types.ListValue(types.Int32Type, lastDeleted)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

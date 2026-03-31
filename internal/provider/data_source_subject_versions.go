@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2021, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package provider
@@ -7,9 +7,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -42,10 +45,22 @@ func (d *subjectVersionsDataSource) Schema(_ context.Context, _ datasource.Schem
 			"rest_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: restEndpointDescription,
+				Validators: []validator.String{
+					EndpointValidator{},
+					stringvalidator.AlsoRequires(
+						path.MatchRoot("credentials").AtName("key"),
+					),
+					stringvalidator.AlsoRequires(
+						path.MatchRoot("credentials").AtName("secret"),
+					),
+				},
 			},
 			"subject_name": schema.StringAttribute{
 				Required:    true,
 				Description: subjectNameDescription,
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"latest": schema.Int32Attribute{
 				Computed:    true,
@@ -73,11 +88,29 @@ func (d *subjectVersionsDataSource) Schema(_ context.Context, _ datasource.Schem
 					"key": schema.StringAttribute{
 						Optional:    true,
 						Description: schemaRegistryKeyDescription,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("credentials").AtName("secret"),
+							),
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("rest_endpoint"),
+							),
+						},
 					},
 					"secret": schema.StringAttribute{
 						Optional:    true,
 						Sensitive:   true,
 						Description: schemaRegistrySecretDescription,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("credentials").AtName("key"),
+							),
+							stringvalidator.AlsoRequires(
+								path.MatchRoot("rest_endpoint"),
+							),
+						},
 					},
 				},
 			},
@@ -110,7 +143,6 @@ func (d *subjectVersionsDataSource) ValidateConfig(ctx context.Context, req data
 func (d *subjectVersionsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 
 	var config subjectVersionsDataSourceModel
-	var subjectVersions schemaVersions
 
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
@@ -118,12 +150,13 @@ func (d *subjectVersionsDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	creds := schemaRegistryCredentials{
+	var subject_config = subjectCleanupResourceModel{
 		RestEndpoint: config.RestEndpoint,
 		Credentials:  config.Credentials,
+		SubjectName:  config.SubjectName,
 	}
 
-	schemaAPIClient, err := schemaRegistryClientFactory(d.client, &creds)
+	subjectVersions, err := ReadSubjectVersions(ctx, d.client, subject_config)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating http client",
@@ -132,40 +165,23 @@ func (d *subjectVersionsDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	subjectVersions.client = schemaAPIClient
-
-	var subject_config = subjectCleanupResourceModel{
-		RestEndpoint: config.RestEndpoint,
-		Credentials:  config.Credentials,
-		SubjectName:  config.SubjectName,
-	}
-
-	err = subjectVersions.get(subject_config)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error creating get subject versions",
-			"Could not get subject versions. Unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	latestVersion := (*subjectVersions.all)[len(*subjectVersions.all)-1]
+	latestVersion := subjectVersions.all[len(subjectVersions.all)-1]
 	config.LatestSchemaVersion = types.Int32Value(int32(latestVersion))
 
 	var all []attr.Value
-	for _, id := range *subjectVersions.all {
+	for _, id := range subjectVersions.all {
 		all = append(all, types.Int32Value(int32(id)))
 	}
 	config.AllVersions, _ = types.ListValue(types.Int32Type, all)
 
 	var active []attr.Value
-	for _, id := range *subjectVersions.active {
+	for _, id := range subjectVersions.active {
 		active = append(active, types.Int32Value(int32(id)))
 	}
 	config.ActiveVersions, _ = types.ListValue(types.Int32Type, active)
 
 	var softDeleted []attr.Value
-	for _, id := range *subjectVersions.softDeleted {
+	for _, id := range subjectVersions.softDeleted {
 		softDeleted = append(softDeleted, types.Int32Value(int32(id)))
 	}
 	config.SoftDeletedVersions, _ = types.ListValue(types.Int32Type, softDeleted)
