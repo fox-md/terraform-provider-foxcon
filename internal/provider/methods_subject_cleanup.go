@@ -130,6 +130,7 @@ func DeleteSchemaVersions(versions *[]int, ctx context.Context, client *Client, 
 func SubjectCleanup(ctx context.Context, client *Client, model *subjectCleanupResourceModel) (diag.Diagnostics, error) {
 	var subjectVersions schemaVersions
 	var diags diag.Diagnostics
+	var latestVersion int
 
 	creds := schemaRegistryCredentials{
 		RestEndpoint: model.RestEndpoint,
@@ -154,7 +155,11 @@ func SubjectCleanup(ctx context.Context, client *Client, model *subjectCleanupRe
 		return diags, err
 	}
 
-	latestVersion := subjectVersions.all[len(subjectVersions.all)-1]
+	if len(subjectVersions.all) > 0 {
+		latestVersion = subjectVersions.all[len(subjectVersions.all)-1]
+	} else {
+		latestVersion = 0
+	}
 
 	var lastDeleted []attr.Value
 	for _, id := range subjectVersions.deleteCandidates {
