@@ -90,7 +90,7 @@ func callSchemaRegistry(method string, endpoint string, body io.Reader) (string,
 func validateSubjectVersions(subject string, expectedResponse string) error {
 	strbody, respCode, err := callSchemaRegistry("GET", fmt.Sprintf("%s/subjects/%s/versions?deleted=true", rest_endpoint, subject), nil)
 
-	if respCode == 404 && "[]" == expectedResponse {
+	if respCode == 404 && "[]" == expectedResponse { //nolint:all
 		return nil
 	}
 
