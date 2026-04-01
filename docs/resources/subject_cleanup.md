@@ -50,14 +50,14 @@ resource "foxcon_subject_cleanup" "max_stored" {
 
 ### Required
 
-- `cleanup_method` (String) Cleanup method mode. Accepted values are: `KEEP_LATEST_ONLY`, `KEEP_ACTIVE_ONLY` and `MAX_STORED_SCHEMAS`.
+- `cleanup_method` (String) Cleanup mode. Accepted values are: `KEEP_LATEST_ONLY`, `KEEP_ACTIVE_ONLY` and `MAX_STORED_SCHEMAS`.
 - `subject_name` (String) The name of the subject.
 
 ### Optional
 
 - `cleanup_needed` (Boolean) Toggle to control whether clean-up in needed. No need to set it manually.
 - `credentials` (Block, Optional) (see [below for nested schema](#nestedblock--credentials))
-- `number_of_schemas_to_keep` (Number) Number of schemas to keep in the subject.
+- `number_of_schemas_to_keep` (Number) Number of schemas to keep in the subject. Is a mandatory attribute while using the `MAX_STORED_SCHEMAS` cleanup mode.
 - `rest_endpoint` (String) Schema registry rest endpoint.
 
 ### Read-Only

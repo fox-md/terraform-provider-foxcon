@@ -70,12 +70,12 @@ func (r *subjectCleanupResource) Schema(_ context.Context, _ resource.SchemaRequ
 				Validators: []validator.String{
 					stringvalidator.OneOf("KEEP_LATEST_ONLY", "KEEP_ACTIVE_ONLY", "MAX_STORED_SCHEMAS"),
 				},
-				Description: "Cleanup method mode. Accepted values are: `KEEP_LATEST_ONLY`, `KEEP_ACTIVE_ONLY` and `MAX_STORED_SCHEMAS`.",
+				Description: "Cleanup mode. Accepted values are: `KEEP_LATEST_ONLY`, `KEEP_ACTIVE_ONLY` and `MAX_STORED_SCHEMAS`.",
 			},
 			"number_of_schemas_to_keep": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "Number of schemas to keep in the subject.",
+				Description: "Number of schemas to keep in the subject. Is a mandatory attribute while using the `MAX_STORED_SCHEMAS` cleanup mode.",
 				Validators: []validator.Int64{
 					SchemasNumberValidator{},
 				},
