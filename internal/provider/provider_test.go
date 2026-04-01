@@ -68,27 +68,32 @@ type Payload struct {
 	SchemaType string `json:"schemaType"`
 }
 
-func callSchemaRegistry(method string, endpoint string, body io.Reader) (string, error) {
+func callSchemaRegistry(method string, endpoint string, body io.Reader) (string, int, error) {
 	req, _ := http.NewRequest(method, endpoint, body)
 	req.Header.Set("Content-Type", "application/vnd.schemaregistry.v1+json")
 	req.SetBasicAuth(api_key, api_secret)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to send HTTP request: %s", err)
+		return "", resp.StatusCode, fmt.Errorf("failed to send HTTP request: %s", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unexpected status code: got %d, want %d", resp.StatusCode, http.StatusOK)
+		return "", resp.StatusCode, fmt.Errorf("unexpected status code: got %d, want %d", resp.StatusCode, http.StatusOK)
 	}
 
 	respBody, _ := io.ReadAll(resp.Body)
 	strbody := string(respBody)
-	return strbody, nil
+	return strbody, resp.StatusCode, nil
 }
 
 func validateSubjectVersions(subject string, expectedResponse string) error {
-	strbody, err := callSchemaRegistry("GET", fmt.Sprintf("%s/subjects/%s/versions?deleted=true", rest_endpoint, subject), nil)
+	strbody, respCode, err := callSchemaRegistry("GET", fmt.Sprintf("%s/subjects/%s/versions?deleted=true", rest_endpoint, subject), nil)
+
+	if respCode == 404 && "[]" == expectedResponse { //nolint:all
+		return nil
+	}
+
 	if err != nil {
 		return err
 	}
@@ -102,7 +107,7 @@ func validateSubjectVersions(subject string, expectedResponse string) error {
 func removeSubjectVersions(subject string, schemasToRemove []int) error {
 
 	for _, i := range schemasToRemove {
-		_, err := callSchemaRegistry("DELETE", fmt.Sprintf("%s/subjects/%s/versions/%d", rest_endpoint, subject, i), nil)
+		_, _, err := callSchemaRegistry("DELETE", fmt.Sprintf("%s/subjects/%s/versions/%d", rest_endpoint, subject, i), nil)
 		if err != nil {
 			return err
 		}
@@ -122,7 +127,7 @@ func addSubjectVersions(subject string, schemasToAdd []int) error {
 	gitRoot := strings.TrimSpace(string(output))
 
 	jsonPayload := []byte(`{"compatibility": "NONE"}`)
-	_, err = callSchemaRegistry("PUT", fmt.Sprintf("%s/config/%s", rest_endpoint, subject), bytes.NewBuffer(jsonPayload))
+	_, _, err = callSchemaRegistry("PUT", fmt.Sprintf("%s/config/%s", rest_endpoint, subject), bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		return err
 	}
@@ -142,7 +147,7 @@ func addSubjectVersions(subject string, schemasToAdd []int) error {
 		if err != nil {
 			return err
 		}
-		_, err = callSchemaRegistry("POST", fmt.Sprintf("%s/subjects/%s/versions", rest_endpoint, subject), bytes.NewBuffer(jsonPayload))
+		_, _, err = callSchemaRegistry("POST", fmt.Sprintf("%s/subjects/%s/versions", rest_endpoint, subject), bytes.NewBuffer(jsonPayload))
 		if err != nil {
 			return err
 		}
