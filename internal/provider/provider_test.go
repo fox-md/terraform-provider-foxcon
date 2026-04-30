@@ -154,3 +154,51 @@ func addSubjectVersions(subject string, schemasToAdd []int) error {
 	}
 	return nil
 }
+
+func getSubjectMode(subject string, expectedMode string) error {
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/mode/%s", rest_endpoint, subject), nil)
+	req.SetBasicAuth(api_key, api_secret)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send HTTP request: %s", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: got %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+
+	body, _ := io.ReadAll(resp.Body)
+	strbody := string(body)
+	defer resp.Body.Close()
+
+	if strbody != "{\"mode\":\""+expectedMode+"\"}" {
+		return fmt.Errorf("unexpected body: got '%s', want '%s'", strbody, "{\"mode\":\""+expectedMode+"\"}")
+	}
+
+	return nil
+}
+
+func setSubjectMode(subject string, subjectMode string) error {
+	jsonPayload := []byte("{\"mode\": \"" + subjectMode + "\"}")
+	req, _ := http.NewRequest("PUT", fmt.Sprintf("%s/mode/%s", rest_endpoint, subject), bytes.NewBuffer(jsonPayload))
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(api_key, api_secret)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send HTTP request: %s", err.Error())
+	}
+
+	body, _ := io.ReadAll(resp.Body)
+	strbody := string(body)
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: got %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+
+	if strbody != "{\"mode\":\""+subjectMode+"\"}" {
+		return fmt.Errorf("unexpected body: got '%s', want '%s'", strbody, "{\"mode\":\""+subjectMode+"\"}")
+	}
+
+	return nil
+}
