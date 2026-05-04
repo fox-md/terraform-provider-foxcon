@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/action"
 	"github.com/hashicorp/terraform-plugin-framework/action/schema"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -71,9 +70,7 @@ func (a *subjectModeAction) Schema(ctx context.Context, req action.SchemaRequest
 			"subject_name": schema.StringAttribute{
 				Required:    true,
 				Description: subjectNameDescription,
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
+				Validators:  subjectNameValidators,
 			},
 			"mode": schema.StringAttribute{
 				Required:    true,
@@ -85,15 +82,7 @@ func (a *subjectModeAction) Schema(ctx context.Context, req action.SchemaRequest
 			"rest_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: restEndpointDescription,
-				Validators: []validator.String{
-					EndpointValidator{},
-					stringvalidator.AlsoRequires(
-						path.MatchRoot("credentials").AtName("key"),
-					),
-					stringvalidator.AlsoRequires(
-						path.MatchRoot("credentials").AtName("secret"),
-					),
-				},
+				Validators:  restEndpointValidators,
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -102,26 +91,12 @@ func (a *subjectModeAction) Schema(ctx context.Context, req action.SchemaRequest
 					"key": schema.StringAttribute{
 						Optional:    true,
 						Description: schemaRegistryKeyDescription,
-						Validators: []validator.String{
-							stringvalidator.AlsoRequires(
-								path.MatchRoot("rest_endpoint"),
-							),
-							stringvalidator.AlsoRequires(
-								path.MatchRoot("credentials").AtName("secret"),
-							),
-						},
+						Validators:  credentialsKeyValidators,
 					},
 					"secret": schema.StringAttribute{
 						Optional:    true,
 						Description: schemaRegistrySecretDescription + " Terraform actions do NOT support sensitive attributes. Please keep that in mind.",
-						Validators: []validator.String{
-							stringvalidator.AlsoRequires(
-								path.MatchRoot("rest_endpoint"),
-							),
-							stringvalidator.AlsoRequires(
-								path.MatchRoot("credentials").AtName("key"),
-							),
-						},
+						Validators:  credentialsSecretValidators,
 					},
 				},
 			},

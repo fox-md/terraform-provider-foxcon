@@ -46,6 +46,7 @@ func (r *schemaRegistryNormalizationResource) Schema(_ context.Context, _ resour
 			"rest_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: restEndpointDescription,
+				Validators:  restEndpointValidators,
 			},
 			"normalization_enabled": schema.BoolAttribute{
 				Optional:    true,
@@ -62,11 +63,13 @@ func (r *schemaRegistryNormalizationResource) Schema(_ context.Context, _ resour
 					"key": schema.StringAttribute{
 						Optional:    true,
 						Description: schemaRegistryKeyDescription,
+						Validators:  credentialsKeyValidators,
 					},
 					"secret": schema.StringAttribute{
 						Optional:    true,
 						Sensitive:   true,
 						Description: schemaRegistrySecretDescription,
+						Validators:  credentialsSecretValidators,
 					},
 				},
 			},

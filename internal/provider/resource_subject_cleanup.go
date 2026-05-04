@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -48,22 +47,12 @@ func (r *subjectCleanupResource) Schema(_ context.Context, _ resource.SchemaRequ
 			"rest_endpoint": schema.StringAttribute{
 				Optional:    true,
 				Description: "Schema registry rest endpoint.",
-				Validators: []validator.String{
-					EndpointValidator{},
-					stringvalidator.AlsoRequires(
-						path.MatchRoot("credentials").AtName("key"),
-					),
-					stringvalidator.AlsoRequires(
-						path.MatchRoot("credentials").AtName("secret"),
-					),
-				},
+				Validators:  restEndpointValidators,
 			},
 			"subject_name": schema.StringAttribute{
 				Required:    true,
 				Description: subjectNameDescription,
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
+				Validators:  subjectNameValidators,
 			},
 			"cleanup_method": schema.StringAttribute{
 				Required: true,
@@ -106,29 +95,13 @@ func (r *subjectCleanupResource) Schema(_ context.Context, _ resource.SchemaRequ
 					"key": schema.StringAttribute{
 						Optional:    true,
 						Description: schemaRegistryKeyDescription,
-						Validators: []validator.String{
-							stringvalidator.LengthAtLeast(1),
-							stringvalidator.AlsoRequires(
-								path.MatchRoot("credentials").AtName("secret"),
-							),
-							stringvalidator.AlsoRequires(
-								path.MatchRoot("rest_endpoint"),
-							),
-						},
+						Validators:  credentialsKeyValidators,
 					},
 					"secret": schema.StringAttribute{
 						Optional:    true,
 						Sensitive:   true,
 						Description: schemaRegistrySecretDescription,
-						Validators: []validator.String{
-							stringvalidator.LengthAtLeast(1),
-							stringvalidator.AlsoRequires(
-								path.MatchRoot("credentials").AtName("key"),
-							),
-							stringvalidator.AlsoRequires(
-								path.MatchRoot("rest_endpoint"),
-							),
-						},
+						Validators:  credentialsSecretValidators,
 					},
 				},
 			},

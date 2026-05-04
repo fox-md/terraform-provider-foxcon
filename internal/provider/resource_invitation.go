@@ -48,6 +48,9 @@ func (r *invitationResource) Schema(_ context.Context, _ resource.SchemaRequest,
 			"email": schema.StringAttribute{
 				Required:    true,
 				Description: "User's/invitee's email address.",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
 			},
 			"auth_type": schema.StringAttribute{
 				Optional: true,
@@ -237,8 +240,6 @@ func (r *invitationResource) Configure(_ context.Context, req resource.Configure
 	}
 
 	clients, ok := req.ProviderData.(*providerClients)
-
-	//client, ok := req.ProviderData.(*Client)
 
 	if !ok {
 		resp.Diagnostics.AddError(

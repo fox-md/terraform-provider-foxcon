@@ -53,11 +53,11 @@ func (r *subjectNormalizationResource) Schema(_ context.Context, _ resource.Sche
 			"subject_name": schema.StringAttribute{
 				Required:    true,
 				Description: subjectNameDescription,
+				Validators:  subjectNameValidators,
 			},
 			"normalization_enabled": schema.BoolAttribute{
 				Optional:    true,
 				Description: normalizationToggleDescription,
-				//Default:  booldefault.StaticBool(false),
 			},
 			"last_updated": schema.StringAttribute{
 				Computed:    true,
@@ -70,11 +70,13 @@ func (r *subjectNormalizationResource) Schema(_ context.Context, _ resource.Sche
 					"key": schema.StringAttribute{
 						Optional:    true,
 						Description: schemaRegistryKeyDescription,
+						Validators:  credentialsKeyValidators,
 					},
 					"secret": schema.StringAttribute{
 						Optional:    true,
 						Sensitive:   true,
 						Description: schemaRegistrySecretDescription,
+						Validators:  credentialsSecretValidators,
 					},
 				},
 			},
