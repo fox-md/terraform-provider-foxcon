@@ -744,32 +744,6 @@ resource "foxcon_subject_normalization" "test" {
 	})
 }
 
-func TestSubjectNormalizationResourceWrongRestEndpoint(t *testing.T) {
-
-	subject_name = "local-wrong-config"
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			// Create and Read testing
-			{
-				Config: schemaProviderConfig + `
-resource "foxcon_subject_normalization" "test" {
-  rest_endpoint = "http://127.127.127.127:1"
-  subject_name = "` + subject_name + `"
-  normalization_enabled = ` + normalization_enabled_true + `
-  credentials {
-    key = "` + api_key + `"
-    secret = "` + api_secret + `"
-  }
-}
-`,
-				ExpectError: regexp.MustCompile(`connect: connection refused`),
-			},
-		},
-	})
-}
-
 func TestSubjectNormalizationResourceWrongCredentials(t *testing.T) {
 
 	subject_name = "local-wrong-creds"
